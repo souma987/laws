@@ -91,27 +91,28 @@ function renderTocNode(node, parent, path = []) {
     if (!titleNode) return;
     const childPath = [...path, structureSegment(tag, child.attr?.Num ?? "0")];
     const item = document.createElement("li");
-    const target = `#${structureId(childPath)}`;
+    const link = document.createElement("a");
+    link.className = "toc-link";
+    link.href = `#${structureId(childPath)}`;
     const title = textOf(titleNode.children).trim();
     const titleParts = title.match(/^(第[〇零一二三四五六七八九十百千万億0-9０-９]+(?:編|章|節|款|目)(?:の[〇零一二三四五六七八九十百千万億0-9０-９]+)?)[\s　]+(.+)$/);
-    const number = document.createElement(titleParts ? "a" : "span");
+    const number = document.createElement("span");
     number.className = "toc-number";
     if (titleParts) {
-      number.href = target;
       number.textContent = titleParts[1];
     } else number.setAttribute("aria-hidden", "true");
-    const heading = document.createElement("a");
+    const heading = document.createElement("span");
     heading.className = "toc-heading";
-    heading.href = target;
     heading.textContent = titleParts ? titleParts[2] : title;
-    item.append(number, heading);
+    link.append(number, heading);
     const ranges = collectArticleRanges(child);
     if (ranges.length) {
       const rangeLabel = document.createElement("span");
       rangeLabel.className = "article-range";
       rangeLabel.textContent = formatArticleRange(ranges.join(" "));
-      item.append(rangeLabel);
+      link.append(rangeLabel);
     }
+    item.append(link);
     parent.append(item);
     renderTocNode(child, parent, childPath);
   });
@@ -132,6 +133,31 @@ function appendInline(node, parent) {
     return;
   }
   (node.children || []).forEach(child => appendInline(child, parent));
+}
+
+function isListItem(tag) {
+  return ["Item", "Subitem1", "Subitem2", "Subitem3", "Subitem4"].includes(tag);
+}
+
+function appendListAware(node, parent, state, depth, structurePath) {
+  if (!isListItem(node?.tag)) {
+    state.list = null;
+    state.tag = null;
+    appendNode(node, parent, depth, structurePath);
+    return;
+  }
+  if (!state.list || state.tag !== node.tag) {
+    state.list = document.createElement("div");
+    state.list.className = "law-list";
+    parent.append(state.list);
+    state.tag = node.tag;
+  }
+  appendNode(node, state.list, depth, structurePath);
+}
+
+function appendChildren(nodes, parent, depth, structurePath) {
+  const state = { list: null, tag: null };
+  nodes.forEach(node => appendListAware(node, parent, state, depth + 1, structurePath));
 }
 
 function appendNode(node, parent, depth = 0, structurePath = []) {
@@ -156,9 +182,12 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     const paragraphNum = children.find(child => child?.tag === "ParagraphNum");
     const hasNumber = paragraphNum && textOf(paragraphNum.children).trim();
     let numberAdded = false;
+    const listState = { list: null, tag: null };
     children.forEach(child => {
-      if (!child || child.tag === "ParagraphNum") return;
+      if (!child || child.tag === "ParagraphNum") { listState.list = null; listState.tag = null; return; }
       if (child.tag === "ParagraphSentence") {
+        listState.list = null;
+        listState.tag = null;
         (child.children || []).forEach(sentence => {
           if (sentence?.tag !== "Sentence") { appendNode(sentence, paragraph, depth + 1, nodePath); return; }
           const line = document.createElement("p");
@@ -174,12 +203,12 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
           paragraph.append(line);
           numberAdded = true;
         });
-      } else appendNode(child, paragraph, depth + 1, nodePath);
+      } else appendListAware(child, paragraph, listState, depth + 1, nodePath);
     });
     if (paragraph.childNodes.length) parent.append(paragraph);
     return;
   }
-  if (["Item", "Subitem1", "Subitem2", "Subitem3", "Subitem4"].includes(tag)) {
+  if (isListItem(tag)) {
     const item = document.createElement("div");
     item.className = `law-item ${tag.toLowerCase()}`;
     const title = children.find(child => child?.tag === `${tag}Title`);
@@ -189,8 +218,11 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       label.textContent = textOf(title.children).trim();
       item.append(label);
     }
+    const listState = { list: null, tag: null };
     children.filter(child => child !== title).forEach(child => {
       if (child?.tag === `${tag}Sentence`) {
+        listState.list = null;
+        listState.tag = null;
         (child.children || []).forEach(sentence => {
           if (sentence?.tag === "Sentence") {
             const line = document.createElement("p");
@@ -199,7 +231,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
             item.append(line);
           } else appendNode(sentence, item, depth + 1, nodePath);
         });
-      } else appendNode(child, item, depth + 1, nodePath);
+      } else appendListAware(child, item, listState, depth + 1, nodePath);
     });
     if (item.childNodes.length) parent.append(item);
     return;
@@ -220,20 +252,26 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     const articleTitle = children.find(child => child?.tag === "ArticleTitle");
     if (node.attr?.Num) element.id = articleId(node.attr.Num);
     if (node.attr?.Num) {
+      const articleHeading = document.createElement("p");
+      articleHeading.className = "article-heading";
       const articleNumber = document.createElement("strong");
       articleNumber.dataset.articleNumber = node.attr.Num;
       const [base, ...suffix] = String(node.attr.Num).split("_");
       const caption = children.find(child => child?.tag === "ArticleCaption");
       articleNumber.textContent = `第${base}条${suffix.map(number => `の${number}`).join("")}`;
-      element.append(articleNumber);
+      articleHeading.append(articleNumber);
       if (caption) {
-        element.append(document.createTextNode(" "));
-        appendInline(caption, element);
+        articleHeading.append(document.createTextNode(" "));
+        const captionText = document.createElement("strong");
+        captionText.className = "article-caption";
+        appendInline(caption, captionText);
+        articleHeading.append(captionText);
       }
+      element.append(articleHeading);
     }
-    children.filter(child => child !== articleTitle && child?.tag !== "ArticleCaption").forEach(child => appendNode(child, element, depth + 1, nodePath));
+    appendChildren(children.filter(child => child !== articleTitle && child?.tag !== "ArticleCaption"), element, depth, nodePath);
   } else {
-    children.forEach(child => appendNode(child, element, depth + 1, nodePath));
+    appendChildren(children, element, depth, nodePath);
   }
 
   if (element.textContent.trim() || element.children.length) parent.append(element);

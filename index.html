@@ -12,8 +12,8 @@
     #toc-panel { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
     #toc-list { list-style: none; margin: 0; padding: 0; }
-    #toc-list li { display: grid; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.75rem; margin: 0.45rem 0; line-height: 1.45; }
-    #toc-list a { color: inherit; text-decoration: none; }
+    #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
+    #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.75rem; color: inherit; text-decoration: none; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }
     #toc-list .article-range { grid-column: 3; text-align: right; white-space: nowrap; }
@@ -24,13 +24,19 @@
     #content section { margin: 1.5rem 0; }
     #content h2, #content h3, #content h4, #content h5, #content h6 { margin: 1.5rem 0 0.75rem; }
     #content p { margin: 0.75rem 0; line-height: 1.8; }
+    #content .article-heading { color: #0047ab; }
+    #content .article-heading strong[data-article-number] { color: #202a31; }
     #content .law-paragraph { margin: 1rem 0; }
     #content .law-sentence { margin: 0.5rem 0; line-height: 1.8; }
     #content .law-sentence.has-number { display: grid; grid-template-columns: 3.5em minmax(0, 1fr); }
     #content .paragraph-number { grid-column: 1; }
-    #content .law-item { display: grid; grid-template-columns: 2.5em minmax(0, 1fr); margin: 0.5rem 0 0.5rem 2em; }
-    #content .law-item > .item-number { grid-column: 1; }
-    #content .law-item > .law-sentence, #content .law-item > section { grid-column: 2; }
+    #content .law-list { margin: 0.75rem 0 0.75rem 2em; padding: 0.65rem 0.8rem; border: 1px solid #aeb7bd; }
+    #content .law-item { display: grid; grid-template-columns: 2.5em minmax(0, 1fr); align-items: start; gap: 0 0.5rem; margin: 0.25rem 0; }
+    #content .law-list > .law-item { margin-left: 0; }
+    #content .law-item > .item-number { grid-column: 1; line-height: 1.8; }
+    #content .law-item > .law-sentence { grid-column: 2; margin-top: 0; }
+    #content .law-item > section { grid-column: 2; }
+    #content .law-item > .law-list { grid-column: 1 / -1; margin: 0.5rem 0 0.5rem 1rem; }
     #content .subitem1 { margin-left: 1.5em; }
     #content .subitem2 { margin-left: 3em; }
     #content .subitem3, #content .subitem4 { margin-left: 4.5em; }
