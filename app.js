@@ -37,15 +37,13 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   event.preventDefault();
   const input = document.querySelector("#article-jump-input");
   const message = document.querySelector("#article-jump-status");
-  const number = input.value.trim()
+  const value = input.value.trim()
     .replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
-    .replace(/^第/, "")
-    .replace(/条の/g, "_")
-    .replace(/条/g, "")
-    .replace(/の/g, "_")
-    .replace(/[‐‑‒–—−]/g, "_");
-  if (!/^\d+(?:_\d+)*$/.test(number)) {
-    message.textContent = "条文番号を入力してください。例：424条の2";
+    .replace(/[－ー‐‑‒–—−]/g, "-");
+  const match = value.match(/^第?\s*(\d+(?:(?:条の|の|-)\s*\d+)*)\s*条?(?:\s*第?\s*\d+\s*項.*)?$/);
+  const number = match?.[1].replace(/条の|の|-/g, "_").replace(/\s/g, "");
+  if (!number || !/^\d+(?:_\d+)*$/.test(number)) {
+    message.textContent = "条文番号を入力してください。例：424条の2、424-2";
     return;
   }
   const id = articleId(number);
@@ -175,6 +173,38 @@ function appendInline(node, parent) {
   (node.children || []).forEach(child => appendInline(child, parent));
 }
 
+function appendSentenceLines(nodes, parent, depth, structurePath, onCreateLine) {
+  let line = null;
+  let sentenceText = null;
+  let sentenceCount = 0;
+  const flush = () => {
+    if (!line) return;
+    parent.append(line);
+    line = null;
+    sentenceText = null;
+    sentenceCount = 0;
+  };
+  (nodes || []).forEach(node => {
+    if (node?.tag !== "Sentence") {
+      flush();
+      appendNode(node, parent, depth, structurePath);
+      return;
+    }
+    if (!line) {
+      line = document.createElement("p");
+      line.className = "law-sentence";
+      onCreateLine?.(line);
+      sentenceText = document.createElement("span");
+      sentenceText.className = "sentence-text";
+      line.append(sentenceText);
+    }
+    if (sentenceCount) sentenceText.append(document.createElement("br"));
+    appendInline(node, sentenceText);
+    sentenceCount += 1;
+  });
+  flush();
+}
+
 function isListItem(tag) {
   return ["Item", "Subitem1", "Subitem2", "Subitem3", "Subitem4"].includes(tag);
 }
@@ -287,11 +317,11 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
         current.textContent = `${date ? "・" : ""}${isEnforced ? "施行中" : "表示中"}`;
         item.append(current);
       }
-      const link = document.createElement("a");
-      link.href = `?${new URLSearchParams({ law_revision_id: revision.law_revision_id })}`;
-      link.className = "amendment-title";
-      link.textContent = revision.amendment_law_title || "改正法令名なし";
-      item.append(link);
+      const title = document.createElement(isCurrent ? "span" : "a");
+      title.className = "amendment-title";
+      title.textContent = revision.amendment_law_title || "改正法令名なし";
+      if (!isCurrent) title.href = `?${new URLSearchParams({ law_revision_id: revision.law_revision_id })}`;
+      item.append(title);
       if (isCurrent) {
         requestAnimationFrame(() => {
           const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
@@ -331,8 +361,10 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
   if (tag === "Paragraph") {
     const paragraph = document.createElement("div");
     paragraph.className = "law-paragraph";
+    if (node.attr?.Num) paragraph.dataset.paragraphNumber = node.attr.Num;
     const paragraphNum = children.find(child => child?.tag === "ParagraphNum");
     const hasNumber = paragraphNum && textOf(paragraphNum.children).trim();
+    if (!hasNumber) paragraph.classList.add("law-paragraph-unmarked");
     let numberAdded = false;
     const listState = { list: null, tag: null };
     children.forEach(child => {
@@ -340,19 +372,13 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       if (child.tag === "ParagraphSentence") {
         listState.list = null;
         listState.tag = null;
-        (child.children || []).forEach(sentence => {
-          if (sentence?.tag !== "Sentence") { appendNode(sentence, paragraph, depth + 1, nodePath); return; }
-          const line = document.createElement("p");
-          line.className = "law-sentence";
-          if (!numberAdded && hasNumber) {
-            line.classList.add("has-number");
-            const number = document.createElement("span");
-            number.className = "paragraph-number";
-            number.textContent = node.attr?.Num || textOf(paragraphNum.children).trim();
-            line.append(number);
-          }
-          appendInline(sentence, line);
-          paragraph.append(line);
+        appendSentenceLines(child.children, paragraph, depth + 1, nodePath, line => {
+          if (numberAdded || !hasNumber) return;
+          line.classList.add("has-number");
+          const number = document.createElement("span");
+          number.className = "paragraph-number";
+          number.textContent = node.attr?.Num || textOf(paragraphNum.children).trim();
+          line.append(number);
           numberAdded = true;
         });
       } else appendListAware(child, paragraph, listState, depth + 1, nodePath);
@@ -375,14 +401,29 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       if (child?.tag === `${tag}Sentence`) {
         listState.list = null;
         listState.tag = null;
-        (child.children || []).forEach(sentence => {
-          if (sentence?.tag === "Sentence") {
-            const line = document.createElement("p");
-            line.className = "law-sentence";
-            appendInline(sentence, line);
-            item.append(line);
-          } else appendNode(sentence, item, depth + 1, nodePath);
-        });
+        const columns = (child.children || []).filter(sentence => sentence?.tag === "Column");
+        if (columns.length) {
+          const columnGroup = document.createElement("div");
+          columnGroup.className = "law-item-columns";
+          const compactLastColumn = columns.length > 1 && textOf(columns[columns.length - 1].children).trim().length <= 12;
+          columnGroup.style.gridTemplateColumns = columns.length === 1
+            ? "minmax(0, 1fr)"
+            : compactLastColumn
+              ? `minmax(0, 1fr) repeat(${columns.length - 1}, max-content)`
+              : `fit-content(12em) repeat(${columns.length - 1}, minmax(0, 1fr))`;
+          columns.forEach((column, index) => {
+            const columnContent = document.createElement("div");
+            columnContent.className = "law-item-column";
+            if (index === columns.length - 1 && compactLastColumn) {
+              columnContent.classList.add("compact-value");
+            }
+            appendSentenceLines(column.children, columnContent, depth + 1, nodePath);
+            columnGroup.append(columnContent);
+          });
+          item.append(columnGroup);
+        } else {
+          appendSentenceLines(child.children, item, depth + 1, nodePath);
+        }
       } else appendListAware(child, item, listState, depth + 1, nodePath);
     });
     if (item.childNodes.length) parent.append(item);
@@ -427,6 +468,24 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       element.append(articleHeading);
     }
     appendChildren(children.filter(child => child !== articleTitle && child?.tag !== "ArticleCaption"), element, depth, nodePath);
+    const articleChildren = [...element.children];
+    const paragraphNodes = children.filter(child => child?.tag === "Paragraph");
+    const hasLegacyParagraphNumbers = paragraphNodes.length > 1
+      && paragraphNodes.some(paragraph => paragraph.attr?.OldNum === "true")
+      && paragraphNodes.every(paragraph => paragraph.attr?.Num
+        && !textOf((paragraph.children || []).find(child => child?.tag === "ParagraphNum")?.children).trim());
+    if (hasLegacyParagraphNumbers) {
+      articleChildren.filter(child => child.classList.contains("law-paragraph-unmarked")).forEach(paragraph => {
+        const number = Number(paragraph.dataset.paragraphNumber);
+        const line = paragraph.querySelector(".law-sentence");
+        if (!line || !Number.isInteger(number) || number < 1) return;
+        line.classList.add("has-number");
+        const marker = document.createElement("span");
+        marker.className = "paragraph-number";
+        marker.textContent = number <= 20 ? String.fromCodePoint(0x2460 + number - 1) : `(${number})`;
+        line.prepend(marker);
+      });
+    }
   } else {
     appendChildren(children, element, depth, nodePath);
   }

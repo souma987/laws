@@ -146,11 +146,15 @@ APIで目次だけを見るリクエストは`elm=TOC`。このときの`law_ful
 
 `Paragraph.attr.Num`は機械処理用の項番号。`ParagraphNum`は法令上表示する番号の要素。民法第424条の2の第1項では`attr.Num`が`"1"`である一方、`ParagraphNum.children`は空で、条文上も第1項の番号は表示されない。第2項以降は`ParagraphNum`に`２`等があるため番号が表示される。画面は、`ParagraphNum`が空でないことを確認してから`Paragraph.attr.Num`を番号に使う。
 
+憲法第4条では`Paragraph`が2つあり、`attr.Num`は`"1"`と`"2"`、どちらも`ParagraphNum.children`は空で、2つ目には`attr.OldNum: "true"`がある。それぞれの`ParagraphSentence`に`Sentence`が1つずつ入る。画面ではこのAPIパターンの番号を`①`、`②`として段落の先頭に表示し、各段落の間隔は通常どおりにする。
+
 項本文は`ParagraphSentence`の下の一つ以上の`Sentence`にある。`Sentence.attr.Num`は文の番号であり、項番号ではない。`WritingMode`など表示属性も付く。`Ruby`/`Rt`など文中に現れる要素は段落本文内のインライン構造として扱う。
 
 ### 号と号細分
 
 号は`Item`。`Item.attr.Num`は`"1"`等の機械処理用番号、`ItemTitle`は`一`等の法令上の表示ラベル、`ItemSentence`以下の`Sentence`が本文を持つ。号細分は`Subitem1`、`Subitem2`等で表され、それぞれの`SubitemNTitle`と`SubitemNSentence`を持つ。
+
+ただし、`ItemSentence`等の号本文要素の子が直接`Sentence`とは限らない。民法602条では`ItemSentence`の下に`Column`が2つあり、第1列が賃貸借の種類、第2列が期間を示す。民法465条の6では、号の下の`Subitem1Sentence`にも同じ列構造があり、第2列に長い本文が入る。列を保ったグリッドで表示し、長い列は折り返せる幅に制限する。末尾の列が短い値の場合だけ右寄せする。
 
 民法第424条の2では、項本文に「次に掲げる要件」とあり、同じ`Article.children`の後続要素に`Item`が三つ並ぶ。したがって、項本文と号本文をひとつの文に連結せず、`Paragraph`と各`Item`を別ブロックに置く。親要素の中にある番号要素と本文要素を、同じ横並びの行に配置する。
 
