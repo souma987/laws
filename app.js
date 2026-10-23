@@ -33,6 +33,44 @@ function articleId(number) {
   return `a${String(number).replaceAll("_", "-")}`;
 }
 
+document.querySelector("#article-jump").addEventListener("submit", event => {
+  event.preventDefault();
+  const input = document.querySelector("#article-jump-input");
+  const message = document.querySelector("#article-jump-status");
+  const number = input.value.trim()
+    .replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
+    .replace(/^第/, "")
+    .replace(/条の/g, "_")
+    .replace(/条/g, "")
+    .replace(/の/g, "_")
+    .replace(/[‐‑‒–—−]/g, "_");
+  if (!/^\d+(?:_\d+)*$/.test(number)) {
+    message.textContent = "条文番号を入力してください。例：424条の2";
+    return;
+  }
+  const id = articleId(number);
+  const displayNumber = number.includes("_")
+    ? `第${number.replace("_", "条の")}`
+    : `第${number}条`;
+  const article = document.getElementById(id);
+  if (!article) {
+    message.textContent = `${displayNumber}は見つかりませんでした。`;
+    return;
+  }
+  history.replaceState(null, "", `${location.pathname}${location.search}#${id}`);
+  article.scrollIntoView({ block: "start" });
+  message.textContent = `${displayNumber}へ移動しました。`;
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.target.closest("input, textarea, select, button, [contenteditable='true']")) return;
+  event.preventDefault();
+  const input = document.querySelector("#article-jump-input");
+  input.focus();
+  input.select();
+});
+
 function findTag(node, tag) {
   if (!node || typeof node !== "object") return null;
   if (Array.isArray(node)) {
@@ -172,10 +210,12 @@ function renderMetadata(data) {
     Repeal: "廃止"
   };
   const fields = [
-    ["法令ID", law.law_id],
+    ["法令ID", law.law_id, law.law_id ? `https://laws.e-gov.go.jp/law/${encodeURIComponent(law.law_id)}` : null],
     ["法令番号", law.law_num],
     ["公布日", law.promulgation_date],
-    ["改正履歴ID", revision.law_revision_id],
+    ["改正履歴ID", revision.law_revision_id, law.law_id && revision.law_revision_id
+      ? `https://laws.e-gov.go.jp/law/${encodeURIComponent(law.law_id)}/${encodeURIComponent(revision.law_revision_id.slice(law.law_id.length + 1))}`
+      : null],
     ["改正法令番号", revision.amendment_law_num],
     ["改正公布日", revision.amendment_promulgate_date],
     ["施行日", revision.amendment_enforcement_date],
@@ -184,12 +224,27 @@ function renderMetadata(data) {
     ["データ更新日", revision.updated]
   ];
   const list = document.querySelector("#metadata-list");
-  fields.forEach(([label, value]) => {
+  fields.forEach(([label, value, href]) => {
     if (value == null || value === "") return;
     const term = document.createElement("dt");
     term.textContent = label;
     const description = document.createElement("dd");
-    description.textContent = String(value);
+    if (href) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", `${label}をe-Gov法令検索で開く`);
+      link.append(document.createTextNode(String(value)));
+      const marker = document.createElement("span");
+      marker.className = "external-link-mark";
+      marker.setAttribute("aria-hidden", "true");
+      marker.textContent = " ↗";
+      link.append(marker);
+      description.append(link);
+    } else {
+      description.textContent = String(value);
+    }
     list.append(term, description);
   });
   if (list.childElementCount) {
@@ -422,7 +477,7 @@ async function load() {
       list.style.setProperty("--toc-number-width", `${numberWidth}em`);
       document.querySelector("#toc").append(list);
       document.querySelector("#layout").classList.add("has-toc");
-      document.querySelector("#toc-panel").hidden = false;
+      document.querySelector("#left-rail").hidden = false;
     }
     appendNode(data.law_full_text, content);
     status.hidden = true;
