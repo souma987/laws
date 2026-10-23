@@ -432,18 +432,10 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         if (columns.length) {
           const columnGroup = document.createElement("div");
           columnGroup.className = "law-item-columns";
-          const compactLastColumn = columns.length > 1 && textOf(columns[columns.length - 1].children).trim().length <= 12;
-          columnGroup.style.gridTemplateColumns = columns.length === 1
-            ? "minmax(0, 1fr)"
-            : compactLastColumn
-              ? `minmax(0, 1fr) repeat(${columns.length - 1}, max-content)`
-              : `fit-content(12em) repeat(${columns.length - 1}, minmax(0, 1fr))`;
-          columns.forEach((column, index) => {
+          columnGroup.style.gridTemplateColumns = `repeat(${columns.length}, minmax(0, 1fr))`;
+          columns.forEach(column => {
             const columnContent = document.createElement("div");
             columnContent.className = "law-item-column";
-            if (index === columns.length - 1 && compactLastColumn) {
-              columnContent.classList.add("compact-value");
-            }
             appendSentenceLines(column.children, columnContent, depth + 1, nodePath);
             columnGroup.append(columnContent);
           });
