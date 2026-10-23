@@ -82,7 +82,7 @@ function collectArticleRanges(node) {
   return collectArticleRanges(node.children);
 }
 
-function renderTocNode(node, parent, path = []) {
+function renderTocNode(node, parent, path = [], depth = 0) {
   (node.children || []).forEach(child => {
     if (!child || typeof child !== "object") return;
     if (!child.tag?.startsWith("TOC") || child.tag === "TOCLabel") return;
@@ -91,6 +91,7 @@ function renderTocNode(node, parent, path = []) {
     if (!titleNode) return;
     const childPath = [...path, structureSegment(tag, child.attr?.Num ?? "0")];
     const item = document.createElement("li");
+    item.className = depth === 0 ? "toc-top-level" : depth === 1 ? "toc-sublevel" : "toc-detail";
     const link = document.createElement("a");
     link.className = "toc-link";
     link.href = `#${structureId(childPath)}`;
@@ -114,7 +115,7 @@ function renderTocNode(node, parent, path = []) {
     }
     item.append(link);
     parent.append(item);
-    renderTocNode(child, parent, childPath);
+    renderTocNode(child, parent, childPath, depth + 1);
   });
 }
 
@@ -158,6 +159,42 @@ function appendListAware(node, parent, state, depth, structurePath) {
 function appendChildren(nodes, parent, depth, structurePath) {
   const state = { list: null, tag: null };
   nodes.forEach(node => appendListAware(node, parent, state, depth + 1, structurePath));
+}
+
+function renderMetadata(data) {
+  const law = data.law_info || {};
+  const revision = data.revision_info || {};
+  const statuses = {
+    CurrentEnforced: "施行中",
+    UnEnforced: "未施行",
+    PreviousEnforced: "過去に施行",
+    Repeal: "廃止"
+  };
+  const fields = [
+    ["法令ID", law.law_id],
+    ["法令番号", law.law_num],
+    ["公布日", law.promulgation_date],
+    ["改正履歴ID", revision.law_revision_id],
+    ["改正法令番号", revision.amendment_law_num],
+    ["改正公布日", revision.amendment_promulgate_date],
+    ["施行日", revision.amendment_enforcement_date],
+    ["施行予定日", revision.amendment_scheduled_enforcement_date],
+    ["施行状況", statuses[revision.current_revision_status] || revision.current_revision_status],
+    ["データ更新日", revision.updated]
+  ];
+  const list = document.querySelector("#metadata-list");
+  fields.forEach(([label, value]) => {
+    if (value == null || value === "") return;
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    description.textContent = String(value);
+    list.append(term, description);
+  });
+  if (list.childElementCount) {
+    document.querySelector("#metadata-panel").hidden = false;
+    document.querySelector("#layout").classList.add("has-metadata");
+  }
 }
 
 function appendNode(node, parent, depth = 0, structurePath = []) {
@@ -245,10 +282,15 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         ? document.createElement("p")
         : document.createElement("section");
 
-  if (titleNode) element.id = structureId(nodePath);
+  if (titleNode) {
+    element.id = structureId(nodePath);
+    element.classList.add("law-structure");
+    element.classList.add(`law-structure-${tag.toLowerCase()}`);
+  }
 
   if (tag === "LawTitle") return;
   if (tag === "Article") {
+    element.classList.add("law-article");
     const articleTitle = children.find(child => child?.tag === "ArticleTitle");
     if (node.attr?.Num) element.id = articleId(node.attr.Num);
     if (node.attr?.Num) {
@@ -274,8 +316,26 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     appendChildren(children, element, depth, nodePath);
   }
 
-  if (element.textContent.trim() || element.children.length) parent.append(element);
+  if (element.textContent.trim() || element.children.length) {
+    if (tag === "Article" && parent.lastElementChild?.classList.contains("law-article")) {
+      const separator = document.createElement("hr");
+      separator.className = "article-separator";
+      parent.append(separator);
+    }
+    parent.append(element);
+  }
 }
+
+function updateStickyHeadingHeight() {
+  content.style.removeProperty("--sticky-major-height");
+  content.style.removeProperty("--sticky-chapter-height");
+  const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")].map(heading => heading.offsetHeight));
+  const chapterHeight = Math.max(0, ...[...content.querySelectorAll("h3")].map(heading => heading.offsetHeight));
+  if (majorHeight) content.style.setProperty("--sticky-major-height", `${majorHeight}px`);
+  if (chapterHeight) content.style.setProperty("--sticky-chapter-height", `${chapterHeight}px`);
+}
+
+window.addEventListener("resize", updateStickyHeadingHeight);
 
 async function load() {
   if (!lawKey) {
@@ -291,6 +351,7 @@ async function load() {
     document.title = `${title} | 法令本文`;
     document.querySelector("#title").textContent = typeof title === "string" ? title : textOf(title);
     document.querySelector("#law-number").textContent = data.law_info?.law_num || "";
+    renderMetadata(data);
     const toc = findTag(data.law_full_text, "TOC");
     if (toc) {
       const list = document.createElement("ul");
@@ -306,7 +367,10 @@ async function load() {
     status.hidden = true;
     content.hidden = false;
     const target = decodeURIComponent(location.hash.slice(1));
-    if (target) requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView());
+    requestAnimationFrame(() => {
+      updateStickyHeadingHeight();
+      if (target) document.getElementById(target)?.scrollIntoView();
+    });
   } catch (error) {
     status.classList.add("error");
     status.textContent = `${error.message} 時間をおいて再読み込みしてください。`;

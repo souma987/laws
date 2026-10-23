@@ -6,26 +6,49 @@
   <title>法令本文</title>
   <style>
     body { margin: 0; }
-    main { width: min(100% - 5rem, 90rem); margin: 3.5rem auto; }
-    #layout { display: grid; grid-template-columns: minmax(0, 62rem); gap: 3rem; align-items: start; }
+    main { width: min(100% - 5rem, 110rem); margin: 3.5rem auto; }
+    #layout { display: grid; grid-template-columns: minmax(0, 62rem); gap: 2rem; align-items: start; }
     #layout.has-toc { grid-template-columns: 25rem minmax(0, 62rem); }
+    #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 62rem) 16rem; }
+    #layout.has-toc.has-metadata { grid-template-columns: 25rem minmax(0, 62rem) 16rem; }
     #toc-panel { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    #metadata-panel { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
+    #metadata-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    #metadata-list { margin: 0; }
+    #metadata-list dt { margin-top: 0.9rem; font-weight: 700; }
+    #metadata-list dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
     #toc-list { list-style: none; margin: 0; padding: 0; }
     #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
+    #toc-list .toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
+    #toc-list .toc-top-level:not(:first-child)::before { position: absolute; top: -1.45rem; right: 0; left: 0; border-top: 1px solid #aeb7bd; content: ""; }
     #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.75rem; color: inherit; text-decoration: none; }
+    #toc-list .toc-top-level .toc-link { color: inherit; font-weight: 700; }
+    #toc-list .toc-sublevel .toc-link { font-weight: 700; }
+    #toc-list .toc-detail .toc-link { font-weight: 400; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }
     #toc-list .article-range { grid-column: 3; text-align: right; white-space: nowrap; }
     #law-main { min-width: 0; }
     #law-number { margin-top: -0.5rem; }
     #content { margin-top: 2rem; }
-    #content [id] { scroll-margin-top: 1rem; }
+    #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }
+    #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division { scroll-margin-top: calc(0.5rem + var(--sticky-major-height, 3rem) + var(--sticky-chapter-height, 2.5rem)); }
+    #content .law-article { scroll-margin-top: calc(0.5rem + var(--sticky-major-height, 3rem) + var(--sticky-chapter-height, 2.5rem)); }
     #content section { margin: 1.5rem 0; }
     #content h2, #content h3, #content h4, #content h5, #content h6 { margin: 1.5rem 0 0.75rem; }
     #content p { margin: 0.75rem 0; line-height: 1.8; }
     #content .article-heading { color: #0047ab; }
     #content .article-heading strong[data-article-number] { color: #202a31; }
+    #content hr.article-separator { margin: 1.5rem 0; border: 0; border-top: 1px solid #d8dcdf; }
+    #content h2 { font-size: 1.75rem; }
+    #content h3 { font-size: 1.5rem; }
+    #content h4 { font-size: 1.3rem; }
+    #content h5 { font-size: 1.15rem; }
+    #content h6 { font-size: 1.05rem; }
+    #content h2, #content h3 { margin: 0; padding: 0.45rem 0; border-bottom: 2px solid #505a60; background: #fff; box-sizing: border-box; }
+    #content h2 { position: sticky; top: 0.5rem; z-index: 3; min-height: var(--sticky-major-height, 3rem); display: flex; align-items: flex-end; }
+    #content h3 { position: sticky; top: calc(0.5rem + var(--sticky-major-height, 3rem)); z-index: 2; min-height: var(--sticky-chapter-height, 2.5rem); display: flex; align-items: flex-end; }
     #content .law-paragraph { margin: 1rem 0; }
     #content .law-sentence { margin: 0.5rem 0; line-height: 1.8; }
     #content .law-sentence.has-number { display: grid; grid-template-columns: 3.5em minmax(0, 1fr); }
@@ -41,11 +64,19 @@
     #content .subitem2 { margin-left: 3em; }
     #content .subitem3, #content .subitem4 { margin-left: 4.5em; }
     footer { margin-top: 3rem; }
-    @media (max-width: 70rem) { #layout.has-toc { grid-template-columns: 20rem minmax(0, 1fr); gap: 2rem; } }
+    @media (max-width: 110rem) {
+      #layout.has-toc:not(.has-metadata) { grid-template-columns: 20rem minmax(0, 1fr); }
+      #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 1fr) 14rem; }
+      #layout.has-toc.has-metadata { grid-template-columns: 20rem minmax(0, 1fr) 14rem; }
+    }
+    @media (max-width: 75rem) {
+      #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 1fr) 14rem; }
+      #layout.has-toc.has-metadata #toc-panel { grid-column: 1 / -1; position: static; max-height: 18rem; }
+    }
     @media (max-width: 48rem) {
       main { width: calc(100% - 2rem); margin: 2rem auto; }
       #layout { display: block; }
-      #toc-panel { position: static; max-height: none; margin-bottom: 2rem; }
+      #toc-panel, #metadata-panel { position: static; max-height: none; margin-bottom: 2rem; }
     }
   </style>
 </head>
@@ -65,6 +96,10 @@
           <p>本文データ：<a href="https://laws.e-gov.go.jp/">e-Gov法令検索</a></p>
         </footer>
       </div>
+      <aside id="metadata-panel" aria-label="法令情報" hidden>
+        <h2>法令情報</h2>
+        <dl id="metadata-list"></dl>
+      </aside>
     </div>
   </main>
   <script src="app.js"></script>
