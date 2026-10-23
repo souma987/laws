@@ -33,6 +33,63 @@ function articleId(number) {
   return `a${String(number).replaceAll("_", "-")}`;
 }
 
+function articleNumberParts(value) {
+  return String(value).split(/[:：\-–—−]/).map(endpoint => endpoint.split("_").map(Number));
+}
+
+function compareArticleDistance(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const difference = (left[index] || 0) - (right[index] || 0);
+    if (difference) return difference;
+  }
+  return 0;
+}
+
+function nearestArticle(target, articles) {
+  const targetParts = articleNumberParts(target)[0];
+  const entries = articles.map(article => ({
+    article,
+    number: article.querySelector("[data-article-number]")?.dataset.articleNumber
+  })).filter(entry => entry.number);
+  if (!entries.length) return null;
+  const exact = entries.find(entry => entry.number === String(target));
+  if (exact) return exact.article;
+  const containingRange = entries.find(({ number }) => {
+    const endpoints = articleNumberParts(number);
+    const [start, end] = endpoints;
+    return endpoints.length > 1
+      && compareArticleDistance(start, targetParts) <= 0
+      && compareArticleDistance(targetParts, end) <= 0;
+  });
+  if (containingRange) return containingRange.article;
+
+  const first = articleNumberParts(entries[0].number)[0];
+  const lastEndpoints = articleNumberParts(entries.at(-1).number);
+  const last = lastEndpoints.at(-1);
+  if (compareArticleDistance(targetParts, first) < 0) return entries[0].article;
+  if (compareArticleDistance(targetParts, last) > 0) return entries.at(-1).article;
+
+  let best = null;
+  let bestDistance = null;
+  entries.forEach(({ article, number }) => {
+    const [start, end] = articleNumberParts(number);
+    const spansTarget = compareArticleDistance(start, targetParts) <= 0
+      && compareArticleDistance(targetParts, end) <= 0;
+    const distance = spansTarget
+      ? [0]
+      : [start, end].map(endpoint => [
+        Math.abs((endpoint[0] || 0) - (targetParts[0] || 0)),
+        Math.abs((endpoint[1] || 0) - (targetParts[1] || 0)),
+        Math.abs((endpoint[2] || 0) - (targetParts[2] || 0))
+      ]).sort(compareArticleDistance)[0];
+    if (bestDistance === null || compareArticleDistance(distance, bestDistance) < 0) {
+      best = article;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
 function kanjiArticleTitleToArabic(title) {
   const digits = { 零: 0, 〇: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
   const smallUnits = { 十: 10, 百: 100, 千: 1000 };
@@ -63,28 +120,18 @@ function kanjiArticleTitleToArabic(title) {
 document.querySelector("#article-jump").addEventListener("submit", event => {
   event.preventDefault();
   const input = document.querySelector("#article-jump-input");
-  const message = document.querySelector("#article-jump-status");
   const value = input.value.trim()
     .replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
     .replace(/[－ー‐‑‒–—−]/g, "-");
-  const match = value.match(/^第?\s*(\d+(?:(?:条の|の|-)\s*\d+)*)\s*条?(?:\s*第?\s*\d+\s*項.*)?$/);
+  const match = value.match(/^第?\s*(\d+(?:(?:条の|の|-)\s*\d+)*)\s*(?:条.*)?$/);
   const number = match?.[1].replace(/条の|の|-/g, "_").replace(/\s/g, "");
-  if (!number || !/^\d+(?:_\d+)*$/.test(number)) {
-    message.textContent = "条文番号を入力してください。例：424条の2、424-2";
-    return;
-  }
-  const id = articleId(number);
-  const displayNumber = number.includes("_")
-    ? `第${number.replace("_", "条の")}`
-    : `第${number}条`;
-  const article = document.getElementById(id);
-  if (!article) {
-    message.textContent = `${displayNumber}は見つかりませんでした。`;
-    return;
-  }
-  history.replaceState(null, "", `${location.pathname}${location.search}#${id}`);
+  if (!number || !/^\d+(?:_\d+)*$/.test(number)) return;
+  const mainArticles = [...content.querySelectorAll(".law-main-provision .law-article")];
+  const articles = mainArticles.length ? mainArticles : [...content.querySelectorAll(".law-article")];
+  const article = nearestArticle(number, articles);
+  if (!article) return;
+  history.replaceState(null, "", `${location.pathname}${location.search}#${article.id}`);
   article.scrollIntoView({ block: "start" });
-  message.textContent = `${displayNumber}へ移動しました。`;
 });
 
 document.addEventListener("keydown", event => {
@@ -510,6 +557,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     element.classList.add("law-structure");
     element.classList.add(`law-structure-${tag.toLowerCase()}`);
   }
+  if (tag === "MainProvision") element.classList.add("law-main-provision");
 
   if (tag === "LawTitle") return;
   if (tag === "Article") {
