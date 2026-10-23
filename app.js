@@ -33,6 +33,33 @@ function articleId(number) {
   return `a${String(number).replaceAll("_", "-")}`;
 }
 
+function kanjiArticleTitleToArabic(title) {
+  const digits = { 零: 0, 〇: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  const smallUnits = { 十: 10, 百: 100, 千: 1000 };
+  const convert = value => {
+    let total = 0;
+    let section = 0;
+    let digit = 0;
+    for (const character of value) {
+      if (character in digits) digit = digits[character];
+      else if (character in smallUnits) {
+        section += (digit || 1) * smallUnits[character];
+        digit = 0;
+      } else if (character === "万") {
+        total += (section + digit) * 10000;
+        section = 0;
+        digit = 0;
+      } else if (character === "億") {
+        total += (section + digit) * 100000000;
+        section = 0;
+        digit = 0;
+      }
+    }
+    return String(total + section + digit);
+  };
+  return title.replace(/[〇零一二三四五六七八九十百千万]+/g, convert);
+}
+
 document.querySelector("#article-jump").addEventListener("submit", event => {
   event.preventDefault();
   const input = document.querySelector("#article-jump-input");
@@ -79,56 +106,56 @@ function findTag(node, tag) {
   return findTag(node.children, tag);
 }
 
-function kanjiNumber(value) {
-  const digits = { "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
-  let total = 0;
-  let section = 0;
-  let number = 0;
-  for (const char of value) {
-    if (char in digits) number = digits[char];
-    else if (char === "十" || char === "百" || char === "千") {
-      const unit = { "十": 10, "百": 100, "千": 1000 }[char];
-      section += (number || 1) * unit;
-      number = 0;
-    } else if (char === "万" || char === "億") {
-      total += (section + number) * (char === "万" ? 10000 : 100000000);
-      section = 0;
-      number = 0;
-    }
-  }
-  return String(total + section + number);
-}
-
-function formatArticleRange(value) {
-  const matches = [...value.matchAll(/第([〇零一二三四五六七八九十百千万億]+)条(?:の([〇零一二三四五六七八九十百千万億]+))?/g)]
-    .map(match => ({ number: kanjiNumber(match[1]), suffix: match[2] ? kanjiNumber(match[2]) : "" }));
-  if (!matches.length) return value.replace(/[（）()]/g, "").trim();
-  if (matches.length === 1) return `${matches[0].number}条${matches[0].suffix ? `の${matches[0].suffix}` : ""}`;
-  const first = matches[0];
-  const last = matches[matches.length - 1];
-  if (first.number === last.number && first.suffix && last.suffix) {
-    return `${first.number}条の${first.suffix}–${last.suffix}`;
-  }
-  return `${first.number}${first.suffix ? `の${first.suffix}` : ""}–${last.number}条${last.suffix ? `の${last.suffix}` : ""}`;
-}
-
-function collectArticleRanges(node) {
+function collectArticleNumbers(node) {
   if (!node || typeof node !== "object") return [];
-  if (Array.isArray(node)) return node.flatMap(collectArticleRanges);
-  if (node.tag === "ArticleRange") return [textOf(node.children)];
-  return collectArticleRanges(node.children);
+  if (Array.isArray(node)) return node.flatMap(collectArticleNumbers);
+  if (node.tag === "Article") return node.attr?.Num == null ? [] : [String(node.attr.Num)];
+  if (node.tag === "TOC") return [];
+  return collectArticleNumbers(node.children);
 }
 
-function renderTocNode(node, parent, path = [], depth = 0) {
-  (node.children || []).forEach(child => {
-    if (!child || typeof child !== "object") return;
-    if (!child.tag?.startsWith("TOC") || child.tag === "TOCLabel") return;
-    const tag = child.tag.slice(3);
+function formatArticleNumber(number) {
+  const [base, ...suffix] = String(number).split("_");
+  return `${base}条${suffix.map(part => `の${part}`).join("")}`;
+}
+
+function articleNumberBoundary(value, edge) {
+  const [start, end] = String(value).split(":");
+  return edge === "end" ? end || start : start;
+}
+
+function formatArticleNumberRange(numbers) {
+  if (!numbers.length) return "";
+  const first = articleNumberBoundary(numbers[0], "start");
+  const last = articleNumberBoundary(numbers[numbers.length - 1], "end");
+  if (first === last) return formatArticleNumber(first);
+  const [firstBase, ...firstSuffix] = first.split("_");
+  const [lastBase, ...lastSuffix] = last.split("_");
+  if (firstBase === lastBase && firstSuffix.length === 1 && lastSuffix.length === 1) {
+    return `${firstBase}条の${firstSuffix[0]}–${lastSuffix[0]}`;
+  }
+  if (!firstSuffix.length && !lastSuffix.length) return `${firstBase}–${lastBase}条`;
+  return `${formatArticleNumber(first)}–${formatArticleNumber(last)}`;
+}
+
+function renderTocFromStructure(node, parent, path = [], depth = 0) {
+  const children = Array.isArray(node) ? node : node?.children || [];
+  children.forEach(child => {
+    if (!child || typeof child !== "object" || child.tag === "TOC") return;
+    if (!structuralTags.has(child.tag)) {
+      renderTocFromStructure(child, parent, path, depth);
+      return;
+    }
+    const tag = child.tag;
     const titleNode = (child.children || []).find(item => item?.tag === `${tag}Title`);
-    if (!titleNode) return;
+    if (!titleNode) {
+      renderTocFromStructure(child, parent, path, depth);
+      return;
+    }
     const childPath = [...path, structureSegment(tag, child.attr?.Num ?? "0")];
     const item = document.createElement("li");
     item.className = depth === 0 ? "toc-top-level" : depth === 1 ? "toc-sublevel" : "toc-detail";
+    item.classList.add(`toc-${tag.toLowerCase()}`);
     const link = document.createElement("a");
     link.className = "toc-link";
     link.href = `#${structureId(childPath)}`;
@@ -143,16 +170,16 @@ function renderTocNode(node, parent, path = [], depth = 0) {
     heading.className = "toc-heading";
     heading.textContent = titleParts ? titleParts[2] : title;
     link.append(number, heading);
-    const ranges = collectArticleRanges(child);
-    if (ranges.length) {
+    const articleNumbers = collectArticleNumbers(child);
+    if (articleNumbers.length) {
       const rangeLabel = document.createElement("span");
       rangeLabel.className = "article-range";
-      rangeLabel.textContent = formatArticleRange(ranges.join(" "));
+      rangeLabel.textContent = formatArticleNumberRange(articleNumbers);
       link.append(rangeLabel);
     }
     item.append(link);
     parent.append(item);
-    renderTocNode(child, parent, childPath, depth + 1);
+    renderTocFromStructure(child, parent, childPath, depth + 1);
   });
 }
 
@@ -456,7 +483,9 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       articleNumber.dataset.articleNumber = node.attr.Num;
       const [base, ...suffix] = String(node.attr.Num).split("_");
       const caption = children.find(child => child?.tag === "ArticleCaption");
-      articleNumber.textContent = `第${base}条${suffix.map(number => `の${number}`).join("")}`;
+      articleNumber.textContent = node.attr.Num.includes(":") && articleTitle
+        ? kanjiArticleTitleToArabic(textOf(articleTitle))
+        : `第${base}条${suffix.map(number => `の${number}`).join("")}`;
       articleHeading.append(articleNumber);
       if (caption) {
         articleHeading.append(document.createTextNode(" "));
@@ -505,8 +534,8 @@ function updateStickyHeadingHeight() {
   content.style.removeProperty("--sticky-chapter-height");
   const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")].map(heading => heading.offsetHeight));
   const chapterHeight = Math.max(0, ...[...content.querySelectorAll("h3")].map(heading => heading.offsetHeight));
-  if (majorHeight) content.style.setProperty("--sticky-major-height", `${majorHeight}px`);
-  if (chapterHeight) content.style.setProperty("--sticky-chapter-height", `${chapterHeight}px`);
+  content.style.setProperty("--sticky-major-height", `${majorHeight}px`);
+  content.style.setProperty("--sticky-chapter-height", `${chapterHeight}px`);
 }
 
 window.addEventListener("resize", updateStickyHeadingHeight);
@@ -527,16 +556,18 @@ async function load() {
     document.querySelector("#law-number").textContent = data.law_info?.law_num || "";
     renderMetadata(data);
     if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
-    const toc = findTag(data.law_full_text, "TOC");
-    if (toc) {
+    const mainProvision = findTag(data.law_full_text, "MainProvision");
+    if (mainProvision) {
       const list = document.createElement("ul");
       list.id = "toc-list";
-      renderTocNode(toc, list);
+      renderTocFromStructure(mainProvision, list);
       const numberWidth = Math.max(1, ...[...list.querySelectorAll(".toc-number")].map(number => Array.from(number.textContent).length));
       list.style.setProperty("--toc-number-width", `${numberWidth}em`);
-      document.querySelector("#toc").append(list);
-      document.querySelector("#layout").classList.add("has-toc");
-      document.querySelector("#left-rail").hidden = false;
+      if (list.childElementCount) {
+        document.querySelector("#toc").append(list);
+        document.querySelector("#layout").classList.add("has-toc");
+        document.querySelector("#left-rail").hidden = false;
+      }
     }
     appendNode(data.law_full_text, content);
     status.hidden = true;

@@ -45,11 +45,10 @@
     #amendment-list a, #amendment-list span { overflow-wrap: anywhere; }
     #toc-list { list-style: none; margin: 0; padding: 0; }
     #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
-    #toc-list .toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
-    #toc-list .toc-top-level:not(:first-child)::before { position: absolute; top: -1.45rem; right: 0; left: 0; border-top: 1px solid #aeb7bd; content: ""; }
+    #toc-list .toc-part.toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
+    #toc-list .toc-part.toc-top-level:not(:first-child)::before { position: absolute; top: -1.45rem; right: 0; left: 0; border-top: 1px solid #aeb7bd; content: ""; }
     #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.75rem; color: inherit; text-decoration: none; }
-    #toc-list .toc-top-level .toc-link { color: inherit; font-weight: 700; }
-    #toc-list .toc-sublevel .toc-link { font-weight: 700; }
+    #toc-list .toc-part .toc-link, #toc-list .toc-chapter .toc-link { color: inherit; font-weight: 700; }
     #toc-list .toc-detail .toc-link { font-weight: 400; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }
