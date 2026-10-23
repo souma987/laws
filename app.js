@@ -1,4 +1,5 @@
 const API = "https://laws.e-gov.go.jp/api/2/law_data/";
+const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const params = new URLSearchParams(location.search);
 const lawKey = params.get("law_id") || params.get("law_num") || params.get("law_revision_id") || params.get("id");
 const status = document.querySelector("#status");
@@ -193,7 +194,66 @@ function renderMetadata(data) {
   });
   if (list.childElementCount) {
     document.querySelector("#metadata-panel").hidden = false;
+    document.querySelector("#right-rail").hidden = false;
     document.querySelector("#layout").classList.add("has-metadata");
+  }
+}
+
+async function loadAmendmentHistory(lawId, currentRevisionId) {
+  const panel = document.querySelector("#amendment-panel");
+  const list = document.querySelector("#amendment-list");
+  panel.hidden = false;
+  document.querySelector("#right-rail").hidden = false;
+  document.querySelector("#layout").classList.add("has-metadata");
+  try {
+    const response = await fetch(`${REVISION_API}${encodeURIComponent(lawId)}?response_format=json`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    (data.revisions || []).forEach(revision => {
+      const item = document.createElement("li");
+      const isCurrent = revision.law_revision_id === currentRevisionId;
+      const isEnforced = revision.current_revision_status === "CurrentEnforced";
+      if (isCurrent) {
+        item.classList.add("current-amendment");
+        item.setAttribute("aria-current", "true");
+      } else if (isEnforced) {
+        item.classList.add("enforced-amendment");
+      }
+      const date = revision.amendment_enforcement_date || revision.amendment_scheduled_enforcement_date || revision.amendment_promulgate_date;
+      if (date) {
+        const time = document.createElement("time");
+        time.dateTime = date;
+        time.textContent = date;
+        item.append(time);
+      }
+      if (isCurrent || isEnforced) {
+        const current = document.createElement("span");
+        current.className = "revision-status";
+        current.textContent = `${date ? "・" : ""}${isEnforced ? "施行中" : "表示中"}`;
+        item.append(current);
+      }
+      const link = document.createElement("a");
+      link.href = `?${new URLSearchParams({ law_revision_id: revision.law_revision_id })}`;
+      link.className = "amendment-title";
+      link.textContent = revision.amendment_law_title || "改正法令名なし";
+      item.append(link);
+      if (isCurrent) {
+        requestAnimationFrame(() => {
+          const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+          panel.scrollTop += item.getBoundingClientRect().top - panelTop;
+        });
+      }
+      list.append(item);
+    });
+    if (!list.childElementCount) {
+      const empty = document.createElement("li");
+      empty.textContent = "改正履歴はありません。";
+      list.append(empty);
+    }
+  } catch {
+    const error = document.createElement("li");
+    error.textContent = "改正履歴を取得できませんでした。";
+    list.append(error);
   }
 }
 
@@ -352,6 +412,7 @@ async function load() {
     document.querySelector("#title").textContent = typeof title === "string" ? title : textOf(title);
     document.querySelector("#law-number").textContent = data.law_info?.law_num || "";
     renderMetadata(data);
+    if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
     const toc = findTag(data.law_full_text, "TOC");
     if (toc) {
       const list = document.createElement("ul");

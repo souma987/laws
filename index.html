@@ -5,19 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>法令本文</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; }
-    main { width: min(100% - 5rem, 110rem); margin: 3.5rem auto; }
-    #layout { display: grid; grid-template-columns: minmax(0, 62rem); gap: 2rem; align-items: start; }
+    main { width: min(calc(100% - 3rem), 110rem); margin: 3.5rem auto; }
+    #layout { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 62rem); gap: 2rem; align-items: start; }
     #layout.has-toc { grid-template-columns: 25rem minmax(0, 62rem); }
     #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 62rem) 16rem; }
     #layout.has-toc.has-metadata { grid-template-columns: 25rem minmax(0, 62rem) 16rem; }
+    #toc-panel, #law-main, #right-rail { min-width: 0; }
     #toc-panel { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
-    #metadata-panel { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
-    #metadata-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
-    #metadata-list { margin: 0; }
-    #metadata-list dt { margin-top: 0.9rem; font-weight: 700; }
-    #metadata-list dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+    #right-rail { position: sticky; top: 1.5rem; align-self: start; display: flex; flex-direction: column; height: calc(100vh - 3rem); min-height: 0; }
+    #right-rail h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    #right-rail dl { margin: 0; }
+    #right-rail dt { margin-top: 0.9rem; font-weight: 700; }
+    #right-rail dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+    #metadata-panel { flex: 0 0 auto; min-width: 0; }
+    #amendment-panel { flex: 1 1 auto; min-width: 0; min-height: 0; margin-top: 1.5rem; overflow: auto; }
+    #amendment-list { margin: 0; padding-left: 2.25em; }
+    #amendment-list li { margin: 0.85rem 0; }
+    #amendment-list li.current-amendment { padding: 0.5rem; border: 1px solid #aeb7bd; }
+    #amendment-list a { color: inherit; }
+    #amendment-list time { display: block; }
+    #amendment-list .amendment-title { display: block; }
+    #amendment-list li.current-amendment time, #amendment-list li.enforced-amendment time,
+    #amendment-list .revision-status { display: inline; }
+    #amendment-list li.current-amendment time, #amendment-list li.enforced-amendment time,
+    #amendment-list .revision-status { font-weight: 700; }
+    #amendment-list a, #amendment-list span { overflow-wrap: anywhere; }
     #toc-list { list-style: none; margin: 0; padding: 0; }
     #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
     #toc-list .toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
@@ -64,19 +79,20 @@
     #content .subitem2 { margin-left: 3em; }
     #content .subitem3, #content .subitem4 { margin-left: 4.5em; }
     footer { margin-top: 3rem; }
-    @media (max-width: 110rem) {
-      #layout.has-toc:not(.has-metadata) { grid-template-columns: 20rem minmax(0, 1fr); }
-      #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 1fr) 14rem; }
-      #layout.has-toc.has-metadata { grid-template-columns: 20rem minmax(0, 1fr) 14rem; }
+    @media (max-width: 115rem) {
+      #layout.has-toc:not(.has-metadata) { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); }
+      #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
+      #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) minmax(0, 14rem); }
     }
     @media (max-width: 75rem) {
-      #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 1fr) 14rem; }
+      #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
       #layout.has-toc.has-metadata #toc-panel { grid-column: 1 / -1; position: static; max-height: 18rem; }
     }
     @media (max-width: 48rem) {
       main { width: calc(100% - 2rem); margin: 2rem auto; }
       #layout { display: block; }
-      #toc-panel, #metadata-panel { position: static; max-height: none; margin-bottom: 2rem; }
+      #toc-panel, #right-rail { position: static; height: auto; max-height: none; margin-bottom: 2rem; }
+      #metadata-panel, #amendment-panel { max-height: none; overflow: visible; }
     }
   </style>
 </head>
@@ -96,10 +112,16 @@
           <p>本文データ：<a href="https://laws.e-gov.go.jp/">e-Gov法令検索</a></p>
         </footer>
       </div>
-      <aside id="metadata-panel" aria-label="法令情報" hidden>
-        <h2>法令情報</h2>
-        <dl id="metadata-list"></dl>
-      </aside>
+      <div id="right-rail" hidden>
+        <aside id="metadata-panel" aria-label="法令情報">
+          <h2>法令情報</h2>
+          <dl id="metadata-list"></dl>
+        </aside>
+        <aside id="amendment-panel" aria-label="改正履歴">
+          <h2>改正履歴</h2>
+          <ol id="amendment-list"></ol>
+        </aside>
+      </div>
     </div>
   </main>
   <script src="app.js"></script>
