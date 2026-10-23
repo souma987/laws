@@ -183,21 +183,69 @@ function renderTocFromStructure(node, parent, path = [], depth = 0) {
   });
 }
 
-function appendInline(node, parent) {
+function appendInline(node, parent, grayParentheticals = false) {
   if (node == null) return;
-  if (Array.isArray(node)) { node.forEach(child => appendInline(child, parent)); return; }
+  if (Array.isArray(node)) { node.forEach(child => appendInline(child, parent, grayParentheticals)); return; }
   if (typeof node === "string" || typeof node === "number") {
-    parent.append(document.createTextNode(String(node)));
+    const value = String(node);
+    if (!grayParentheticals) {
+      parent.append(document.createTextNode(value));
+      return;
+    }
+    const pairs = {
+      "（": { close: "）", kind: "parenthetical" },
+      "(": { close: ")", kind: "parenthetical" },
+      "「": { close: "」", kind: "quotation" },
+      "『": { close: "』", kind: "quotation" }
+    };
+    const stack = [];
+    const matching = new Map();
+    const characters = [...value];
+    characters.forEach((character, index) => {
+      if (pairs[character]) {
+        stack.push({ index, close: pairs[character].close });
+      } else if (stack.length && character === stack[stack.length - 1].close) {
+        matching.set(stack.pop().index, index);
+      }
+    });
+    let current = parent;
+    const active = [];
+    let plainText = "";
+    const flush = () => {
+      if (!plainText) return;
+      current.append(document.createTextNode(plainText));
+      plainText = "";
+    };
+    characters.forEach((character, index) => {
+      if (matching.has(index)) {
+        flush();
+        const kind = pairs[character].kind;
+        const wrapper = document.createElement(kind === "quotation" ? "strong" : "span");
+        if (kind === "quotation") wrapper.className = "law-quotation";
+        else wrapper.className = "law-parenthetical";
+        current.append(wrapper);
+        active.push({ close: matching.get(index), parent: current });
+        current = wrapper;
+        plainText = character;
+      } else if (active.at(-1)?.close === index) {
+        plainText += character;
+        flush();
+        current = active.pop().parent;
+      } else {
+        plainText += character;
+      }
+    });
+    flush();
     return;
   }
   if (typeof node !== "object") return;
   if (node.tag === "Ruby" || node.tag === "Rt") {
     const element = document.createElement(node.tag === "Ruby" ? "ruby" : "rt");
-    (node.children || []).forEach(child => appendInline(child, element));
+    (node.children || []).forEach(child => appendInline(child, element, grayParentheticals));
     parent.append(element);
     return;
   }
-  (node.children || []).forEach(child => appendInline(child, parent));
+  (node.children || []).forEach(child => appendInline(child, parent, grayParentheticals));
 }
 
 function appendSentenceLines(nodes, parent, depth, structurePath, onCreateLine) {
@@ -226,7 +274,7 @@ function appendSentenceLines(nodes, parent, depth, structurePath, onCreateLine) 
       line.append(sentenceText);
     }
     if (sentenceCount) sentenceText.append(document.createElement("br"));
-    appendInline(node, sentenceText);
+    appendInline(node, sentenceText, true);
     sentenceCount += 1;
   });
   flush();
