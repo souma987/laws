@@ -243,7 +243,9 @@ function renderTocFromStructure(node, parent, path = [], depth = 0) {
     if (articleNumbers.length) {
       const rangeLabel = document.createElement("span");
       rangeLabel.className = "article-range";
-      rangeLabel.textContent = formatArticleNumberRange(articleNumbers);
+      rangeLabel.textContent = ["Part", "Chapter"].includes(tag)
+        ? formatArticleNumberRange(articleNumbers)
+        : formatArticleNumber(articleNumberBoundary(articleNumbers[0], "start"));
       link.append(rangeLabel);
     }
     item.append(link);
