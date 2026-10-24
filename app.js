@@ -805,10 +805,22 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
           const columnGroup = document.createElement("div");
           columnGroup.className = "law-item-columns";
           columnGroup.style.gridTemplateColumns = `repeat(${columns.length}, minmax(0, 1fr))`;
-          columns.forEach(column => {
+          columns.forEach((column, index) => {
             const columnContent = document.createElement("div");
             columnContent.className = "law-item-column";
             appendSentenceLines(column.children, columnContent, depth + 1, nodePath);
+            if (index === 0) {
+              const itemNumber = item.querySelector(":scope > .item-number");
+              if (itemNumber) {
+                const numberedColumn = document.createElement("div");
+                numberedColumn.className = "law-item-column-numbered";
+                const columnBody = document.createElement("div");
+                columnBody.className = "law-item-column-numbered-content";
+                columnBody.append(...columnContent.childNodes);
+                numberedColumn.append(itemNumber, columnBody);
+                columnContent.append(numberedColumn);
+              }
+            }
             columnGroup.append(columnContent);
           });
           item.append(columnGroup);
@@ -821,19 +833,105 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     return;
   }
   const level = headingLevels.get(tag) || null;
+  const tableElements = {
+    Table: "table", TableHeaderRow: "tr", TableHeaderColumn: "th",
+    TableRow: "tr", TableColumn: "td"
+  };
   const element = level
     ? document.createElement(`h${Math.min(level, 6)}`)
     : inlineTags.has(tag)
       ? document.createElement("span")
-      : ["Sentence", "Column", "FigureStruct"].includes(tag)
-        ? document.createElement("p")
-        : document.createElement("section");
+      : tableElements[tag]
+        ? document.createElement(tableElements[tag])
+        : ["Sentence", "Column", "FigureStruct"].includes(tag)
+          ? document.createElement("p")
+          : document.createElement("section");
+
+  if (tag === "Table") {
+    element.classList.add("law-table");
+    const headerRows = children.filter(child => child?.tag === "TableHeaderRow");
+    const rows = children.filter(child => child?.tag === "TableRow");
+    if (headerRows.length) {
+      const thead = document.createElement("thead");
+      headerRows.forEach(row => appendNode(row, thead, depth + 1, nodePath));
+      element.append(thead);
+    }
+    const tbody = document.createElement("tbody");
+    rows.forEach(row => appendNode(row, tbody, depth + 1, nodePath));
+    if (tbody.childNodes.length) element.append(tbody);
+    const columnCount = Math.max(0, ...[...tbody.rows].map(row => row.cells.length));
+    if (columnCount === 2) {
+      element.classList.add("law-table-two-column");
+      element.style.tableLayout = "fixed";
+      const colgroup = document.createElement("colgroup");
+      for (let index = 0; index < 2; index += 1) {
+        const column = document.createElement("col");
+        column.style.setProperty("width", "50%", "important");
+        colgroup.append(column);
+      }
+      element.insertBefore(colgroup, element.firstChild);
+    }
+    const isSubitemText = text => /^[ァ-ヶ][　\s]/u.test(text.trimStart());
+    const isSubitemRow = row => isSubitemText(row.cells[0]?.textContent || "");
+    const tableRows = [...tbody.rows];
+    let group = [];
+    const frameSubitemGroup = () => {
+      if (!group.length) return;
+      group.forEach((row, index) => {
+        row.classList.add("law-table-subitem-row");
+        const firstCell = row.cells[0];
+        firstCell.style.borderLeft = "1px solid #aeb7bd";
+        firstCell.style.borderRight = "1px solid #aeb7bd";
+        if (index === 0) firstCell.style.borderTop = "1px solid #aeb7bd";
+        if (index === group.length - 1) firstCell.style.borderBottom = "1px solid #aeb7bd";
+      });
+      group = [];
+    };
+    tableRows.forEach(row => {
+      if (isSubitemRow(row)) group.push(row);
+      else frameSubitemGroup();
+    });
+    frameSubitemGroup();
+    for (const cell of element.querySelectorAll("td, th")) {
+      if (cell.parentElement.classList.contains("law-table-subitem-row")) continue;
+      let subitemParagraphs = [];
+      const frameSubitemParagraphs = () => {
+        if (!subitemParagraphs.length) return;
+        const frame = document.createElement("div");
+        frame.className = "law-table-subitem-list";
+        cell.insertBefore(frame, subitemParagraphs[0]);
+        subitemParagraphs.forEach(paragraph => frame.append(paragraph));
+        subitemParagraphs = [];
+      };
+      [...cell.children].forEach(child => {
+        if (child.matches("p.law-sentence") && isSubitemText(child.textContent)) subitemParagraphs.push(child);
+        else frameSubitemParagraphs();
+      });
+      frameSubitemParagraphs();
+    }
+  } else if (["TableHeaderRow", "TableRow"].includes(tag)) {
+    children.forEach(child => appendNode(child, element, depth + 1, nodePath));
+  } else if (["TableHeaderColumn", "TableColumn"].includes(tag)) {
+    const borderStyle = { solid: "solid", dotted: "dotted", double: "double", none: "none" };
+    for (const [attribute, side] of [["BorderTop", "top"], ["BorderRight", "right"], ["BorderBottom", "bottom"], ["BorderLeft", "left"]]) {
+      const style = borderStyle[node.attr?.[attribute] || "solid"];
+      element.style[`border${side[0].toUpperCase()}${side.slice(1)}`] = `${style === "double" ? 3 : 1}px ${style} #aeb7bd`;
+    }
+    if (node.attr?.rowspan) element.rowSpan = Number(node.attr.rowspan);
+    if (node.attr?.colspan) element.colSpan = Number(node.attr.colspan);
+    if (["left", "center", "right", "justify"].includes(node.attr?.Align)) element.style.textAlign = node.attr.Align;
+    appendChildren(children, element, depth, nodePath);
+  } else if (tag === "Sentence") {
+    element.classList.add("law-sentence");
+    appendInline(node, element, true);
+  }
 
   if (titleNode) {
     element.id = structureId(nodePath);
     element.classList.add("law-structure");
     element.classList.add(`law-structure-${tag.toLowerCase()}`);
   }
+  if (tag === "TableStruct") element.classList.add("law-table-frame");
   if (tag === "MainProvision") element.classList.add("law-main-provision");
   if (tag === "SupplProvision") {
     element.classList.add("law-supplementary-provision");
@@ -907,7 +1005,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         line.prepend(marker);
       });
     }
-  } else {
+  } else if (!["Table", "TableHeaderRow", "TableRow", "TableHeaderColumn", "TableColumn", "Sentence"].includes(tag)) {
     appendChildren(tag === "SupplProvision"
       ? children.filter(child => !["SupplProvisionLabel", "SupplProvisionTitle"].includes(child?.tag))
       : children, element, depth, nodePath);
