@@ -4,6 +4,7 @@ const params = new URLSearchParams(location.search);
 const lawKey = params.get("law_id") || params.get("law_num") || params.get("law_revision_id") || params.get("id");
 const status = document.querySelector("#status");
 const content = document.querySelector("#content");
+let currentLawNumber = "";
 
 function textOf(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
@@ -117,6 +118,16 @@ function kanjiArticleTitleToArabic(title) {
   return title.replace(/[〇零一二三四五六七八九十百千万]+/g, convert);
 }
 
+function formatSupplementaryLawNumber(value) {
+  const toArabic = number => /^[〇零一二三四五六七八九]+$/.test(number)
+    ? [...number].map(character => ({ 〇: "0", 零: "0", 一: "1", 二: "2", 三: "3", 四: "4", 五: "5", 六: "6", 七: "7", 八: "8", 九: "9" })[character]).join("")
+    : kanjiArticleTitleToArabic(number);
+  return String(value).replace(
+    /^(明治|大正|昭和|平成|令和)([^年]+)年.*?法律第([^号]+)号$/,
+    (_, era, year, number) => `${era}${toArabic(year)}年法律第${toArabic(number)}号`
+  );
+}
+
 document.querySelector("#article-jump").addEventListener("submit", event => {
   event.preventDefault();
   const input = document.querySelector("#article-jump-input");
@@ -151,6 +162,17 @@ function findTag(node, tag) {
   }
   if (node.tag === tag) return node;
   return findTag(node.children, tag);
+}
+
+function findTags(node, tag, matches = []) {
+  if (!node || typeof node !== "object") return matches;
+  if (Array.isArray(node)) {
+    node.forEach(child => findTags(child, tag, matches));
+    return matches;
+  }
+  if (node.tag === tag) matches.push(node);
+  if (node.tag !== "TOC") findTags(node.children, tag, matches);
+  return matches;
 }
 
 function collectArticleNumbers(node) {
@@ -558,6 +580,33 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     element.classList.add(`law-structure-${tag.toLowerCase()}`);
   }
   if (tag === "MainProvision") element.classList.add("law-main-provision");
+  if (tag === "SupplProvision") {
+    element.classList.add("law-supplementary-provision");
+    const labelNode = children.find(child => child?.tag === "SupplProvisionLabel");
+    const titleNode = children.find(child => child?.tag === "SupplProvisionTitle");
+    const heading = document.createElement("div");
+    heading.className = "law-supplementary-heading";
+    const headingLabel = document.createElement("span");
+    headingLabel.className = "law-supplementary-heading-label";
+    headingLabel.textContent = labelNode
+      ? textOf(labelNode.children).trim().replace(/[\s　]+/g, "")
+      : "附則";
+    if (titleNode) {
+      const title = document.createElement("span");
+      title.className = "law-supplementary-heading-title";
+      appendInline(titleNode, title);
+      headingLabel.append(" ", title);
+    }
+    const lawNumber = node.attr?.AmendLawNum || currentLawNumber;
+    heading.append(headingLabel);
+    if (lawNumber) {
+      const number = document.createElement("span");
+      number.className = "law-supplementary-law-number";
+      number.textContent = lawNumber;
+      heading.append(number);
+    }
+    element.append(heading);
+  }
 
   if (tag === "LawTitle") return;
   if (tag === "Article") {
@@ -604,11 +653,14 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       });
     }
   } else {
-    appendChildren(children, element, depth, nodePath);
+    appendChildren(tag === "SupplProvision"
+      ? children.filter(child => !["SupplProvisionLabel", "SupplProvisionTitle"].includes(child?.tag))
+      : children, element, depth, nodePath);
   }
 
   if (element.textContent.trim() || element.children.length) {
-    if ((tag === "Article" || titleNode) && parent.lastElementChild?.classList.contains("law-article")) {
+    const previous = parent.lastElementChild;
+    if ((tag === "Article" || titleNode) && previous?.classList.contains("law-article")) {
       const separator = document.createElement("hr");
       separator.className = "article-separator";
       parent.append(separator);
@@ -665,15 +717,55 @@ async function load() {
     const data = await response.json();
     if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
+    currentLawNumber = data.law_info?.law_num || "";
     document.title = `${title} | 法令本文`;
     document.querySelector("#title").textContent = typeof title === "string" ? title : textOf(title);
     renderMetadata(data);
     if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
     const mainProvision = findTag(data.law_full_text, "MainProvision");
-    if (mainProvision) {
+    const supplementaryProvisions = findTags(data.law_full_text, "SupplProvision");
+    if (mainProvision || supplementaryProvisions.length) {
       const list = document.createElement("ul");
       list.id = "toc-list";
-      renderTocFromStructure(mainProvision, list);
+      if (mainProvision) renderTocFromStructure(mainProvision, list);
+      if (supplementaryProvisions.length) {
+        const group = document.createElement("li");
+        group.className = "toc-top-level toc-part toc-supplementary-heading";
+        const link = document.createElement("a");
+        link.className = "toc-link";
+        link.href = "#sp1";
+        const number = document.createElement("span");
+        number.className = "toc-number";
+        const heading = document.createElement("span");
+        heading.className = "toc-heading";
+        number.textContent = "附則";
+        heading.setAttribute("aria-hidden", "true");
+        link.append(number, heading);
+        group.append(link);
+
+        const entries = document.createElement("ul");
+        entries.className = "toc-supplementary-entries";
+        supplementaryProvisions.forEach((provision, index) => {
+          const item = document.createElement("li");
+          item.className = "toc-sublevel toc-supplementary-provision";
+          const entryLink = document.createElement("a");
+          entryLink.className = "toc-link";
+          entryLink.href = `#sp${index + 1}`;
+          const entryNumber = document.createElement("span");
+          entryNumber.className = "toc-number";
+          entryNumber.textContent = String(index + 1);
+          const entryHeading = document.createElement("span");
+          entryHeading.className = "toc-heading";
+          entryHeading.textContent = formatSupplementaryLawNumber(
+            provision.attr?.AmendLawNum || data.law_info?.law_num || ""
+          );
+          entryLink.append(entryNumber, entryHeading);
+          item.append(entryLink);
+          entries.append(item);
+        });
+        group.append(entries);
+        list.append(group);
+      }
       const numberWidth = Math.max(1, ...[...list.querySelectorAll(".toc-number")].map(number => Array.from(number.textContent).length));
       list.style.setProperty("--toc-number-width", `${numberWidth}em`);
       if (list.childElementCount) {
@@ -683,6 +775,9 @@ async function load() {
       }
     }
     appendNode(data.law_full_text, content);
+    content.querySelectorAll(".law-supplementary-provision").forEach((provision, index) => {
+      provision.id = `sp${index + 1}`;
+    });
     status.hidden = true;
     content.hidden = false;
     const target = decodeURIComponent(location.hash.slice(1));

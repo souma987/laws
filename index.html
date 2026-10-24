@@ -46,12 +46,16 @@
     #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
     #toc-list .toc-part.toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
     #toc-list .toc-part.toc-top-level:not(:first-child)::before { position: absolute; top: -1.45rem; right: 0; left: 0; border-top: 1px solid #aeb7bd; content: ""; }
+    #toc-list .toc-supplementary-entries { list-style: none; margin: 0; padding: 0; }
     #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.75rem; color: inherit; text-decoration: none; }
     #toc-list .toc-part .toc-link, #toc-list .toc-chapter .toc-link { color: inherit; font-weight: 700; }
     #toc-list .toc-detail .toc-link { font-weight: 400; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
+    #toc-list .toc-supplementary-heading > .toc-link > .toc-number { justify-self: end; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }
     #toc-list .article-range { grid-column: 3; text-align: right; white-space: nowrap; }
+    #toc-list .toc-supplementary-provision .toc-link { grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr); }
+    #toc-list .toc-supplementary-provision .toc-link, #toc-list .toc-supplementary-provision .toc-number { font-weight: 400; }
     #law-main { min-width: 0; }
     #content { margin-top: 2rem; }
     #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }
@@ -64,6 +68,8 @@
     #content p { margin: 0.75rem 0; line-height: 1.8; }
     #content .article-heading { color: #0047ab; }
     #content .article-heading strong[data-article-number] { color: #202a31; }
+    #content .law-supplementary-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding-bottom: 0.45rem; border-bottom: 1px solid #aeb7bd; font-size: 1.25rem; font-weight: 700; }
+    #content .law-supplementary-law-number { text-align: right; font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
     #content hr.article-separator { margin: 1.5rem 0; border: 0; border-top: 1px solid #d8dcdf; }
     #content h2 { font-size: 1.75rem; }
     #content h3 { font-size: 1.5rem; }
