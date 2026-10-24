@@ -72,6 +72,8 @@
     #toc-list .toc-chapter.toc-chapter-leaf .toc-link { font-weight: 400; }
     #toc-list .toc-detail .toc-link { font-weight: 400; }
     #toc-list .toc-link[aria-current="location"] { color: #0047ab; }
+    #toc-list .toc-link[aria-current="location"] { position: relative; }
+    #toc-list .toc-link[aria-current="location"]::after { position: absolute; right: var(--toc-active-line-right, 0); bottom: 0; left: var(--toc-active-line-left, 0); border-bottom: 2px solid #0047ab; content: ""; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
     #toc-list .toc-supplementary-heading > .toc-link > .toc-number { justify-self: end; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }

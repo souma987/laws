@@ -1070,6 +1070,22 @@ function updateActiveTocItem() {
     if (link === active) link.setAttribute("aria-current", "location");
     else link.removeAttribute("aria-current");
   });
+  if (active) {
+    const number = active.querySelector(".toc-number");
+    const heading = active.querySelector(".toc-heading");
+    const linkRect = active.getBoundingClientRect();
+    const numberRect = number?.getBoundingClientRect();
+    active.style.setProperty("--toc-active-line-left", `${numberRect ? numberRect.left - linkRect.left : 0}px`);
+    const supplementaryEntry = active.closest(".toc-supplementary-provision");
+    let headingRight = null;
+    if (supplementaryEntry && heading) {
+      const range = document.createRange();
+      range.selectNodeContents(heading);
+      const textRects = [...range.getClientRects()];
+      if (textRects.length) headingRight = Math.max(...textRects.map(rect => rect.right));
+    }
+    active.style.setProperty("--toc-active-line-right", `${headingRight === null ? 0 : linkRect.right - headingRight}px`);
+  }
 }
 
 window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
