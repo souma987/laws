@@ -1028,6 +1028,10 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
   event.preventDefault();
   const query = document.querySelector("#search-query").value.trim();
   if (!query) return;
+  if (/^[A-Za-z0-9]{15}/.test(query)) {
+    location.href = `?${new URLSearchParams({ id: query.toUpperCase() })}`;
+    return;
+  }
   const searchStatus = document.querySelector("#search-status");
   const results = document.querySelector("#search-results");
   const params = new URLSearchParams({ law_title: query, limit: "100", offset: "0", response_format: "json" });
