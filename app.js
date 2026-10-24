@@ -2,7 +2,7 @@ const API = "https://laws.e-gov.go.jp/api/2/law_data/";
 const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const params = new URLSearchParams(location.search);
-const lawId = params.get("law_id");
+const lawId = params.get("id");
 const status = document.querySelector("#status");
 const content = document.querySelector("#content");
 const previousMarkerButton = document.querySelector("#previous-marker");
@@ -654,7 +654,7 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       const title = document.createElement(isCurrent ? "span" : "a");
       title.className = "amendment-title";
       title.textContent = revision.amendment_law_title || "改正法令名なし";
-      if (!isCurrent) title.href = `?${new URLSearchParams({ law_id: revision.law_revision_id })}`;
+      if (!isCurrent) title.href = `?${new URLSearchParams({ id: revision.law_revision_id })}`;
       item.append(title);
       list.append(item);
     });
@@ -1044,7 +1044,7 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
       const item = document.createElement("li");
       const link = document.createElement("a");
       const id = law.law_id || law.revision_info?.law_revision_id;
-      link.href = `?${new URLSearchParams({ law_id: id })}`;
+      link.href = `?${new URLSearchParams({ id })}`;
       link.textContent = law.revision_info?.law_title || law.law_title || law.law_num || id;
       item.append(link);
       const number = law.law_num || law.law_info?.law_num;
