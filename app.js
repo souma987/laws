@@ -510,7 +510,18 @@ function selectRightTab(tab, moveFocus = false) {
     item.tabIndex = selected ? 0 : -1;
     panels[index].hidden = !selected;
   });
+  if (tab.id === "amendment-tab") {
+    requestAnimationFrame(scrollCurrentAmendmentIntoView);
+  }
   if (moveFocus) tab.focus();
+}
+
+function scrollCurrentAmendmentIntoView() {
+  const panel = document.querySelector("#amendment-panel");
+  const item = panel.querySelector(".current-amendment");
+  if (!item || panel.hidden) return;
+  const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+  panel.scrollTop += item.getBoundingClientRect().top - panelTop;
 }
 
 document.querySelector('#right-tabs').addEventListener('click', event => {
@@ -563,12 +574,6 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       title.textContent = revision.amendment_law_title || "改正法令名なし";
       if (!isCurrent) title.href = `?${new URLSearchParams({ law_revision_id: revision.law_revision_id })}`;
       item.append(title);
-      if (isCurrent) {
-        requestAnimationFrame(() => {
-          const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
-          panel.scrollTop += item.getBoundingClientRect().top - panelTop;
-        });
-      }
       list.append(item);
     });
     if (!list.childElementCount) {
@@ -576,6 +581,7 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       empty.textContent = "改正履歴はありません。";
       list.append(empty);
     }
+    requestAnimationFrame(scrollCurrentAmendmentIntoView);
   } catch {
     const error = document.createElement("li");
     error.textContent = "改正履歴を取得できませんでした。";

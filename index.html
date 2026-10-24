@@ -7,7 +7,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; }
-    main { width: min(calc(100% - 3rem), 110rem); margin: 3.5rem auto; }
+    main { width: min(calc(100% - 3rem), 110rem); margin: 0 auto; }
     #layout { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 62rem); gap: 2rem; align-items: start; }
     #layout.has-toc { grid-template-columns: 25rem minmax(0, 62rem); }
     #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 62rem) 16rem; }
@@ -121,7 +121,7 @@
       #layout.has-toc.has-metadata #toc-panel { max-height: 18rem; }
     }
     @media (max-width: 48rem) {
-      main { width: calc(100% - 2rem); margin: 2rem auto; }
+      main { width: calc(100% - 2rem); margin: 0 auto; }
       #layout { display: block; }
       #left-rail, #right-rail { position: static; height: auto; max-height: none; margin-bottom: 2rem; }
       #toc-panel { max-height: none; }
