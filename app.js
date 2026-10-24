@@ -804,7 +804,6 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         if (columns.length) {
           const columnGroup = document.createElement("div");
           columnGroup.className = "law-item-columns";
-          columnGroup.style.gridTemplateColumns = `repeat(${columns.length}, minmax(0, 1fr))`;
           columns.forEach((column, index) => {
             const columnContent = document.createElement("div");
             columnContent.className = "law-item-column";
@@ -862,12 +861,9 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     const columnCount = Math.max(0, ...[...tbody.rows].map(row => row.cells.length));
     if (columnCount === 2) {
       element.classList.add("law-table-two-column");
-      element.style.tableLayout = "fixed";
       const colgroup = document.createElement("colgroup");
       for (let index = 0; index < 2; index += 1) {
-        const column = document.createElement("col");
-        column.style.setProperty("width", "50%", "important");
-        colgroup.append(column);
+        colgroup.append(document.createElement("col"));
       }
       element.insertBefore(colgroup, element.firstChild);
     }
@@ -880,10 +876,9 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       group.forEach((row, index) => {
         row.classList.add("law-table-subitem-row");
         const firstCell = row.cells[0];
-        firstCell.style.borderLeft = "1px solid #aeb7bd";
-        firstCell.style.borderRight = "1px solid #aeb7bd";
-        if (index === 0) firstCell.style.borderTop = "1px solid #aeb7bd";
-        if (index === group.length - 1) firstCell.style.borderBottom = "1px solid #aeb7bd";
+        firstCell.classList.add("law-table-subitem-cell");
+        if (index === 0) firstCell.classList.add("law-table-subitem-first");
+        if (index === group.length - 1) firstCell.classList.add("law-table-subitem-last");
       });
       group = [];
     };
@@ -915,11 +910,11 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     const borderStyle = { solid: "solid", dotted: "dotted", double: "double", none: "none" };
     for (const [attribute, side] of [["BorderTop", "top"], ["BorderRight", "right"], ["BorderBottom", "bottom"], ["BorderLeft", "left"]]) {
       const style = borderStyle[node.attr?.[attribute] || "solid"];
-      element.style[`border${side[0].toUpperCase()}${side.slice(1)}`] = `${style === "double" ? 3 : 1}px ${style} #aeb7bd`;
+      if (style !== "solid") element.classList.add(`law-table-border-${side}-${style}`);
     }
     if (node.attr?.rowspan) element.rowSpan = Number(node.attr.rowspan);
     if (node.attr?.colspan) element.colSpan = Number(node.attr.colspan);
-    if (["left", "center", "right", "justify"].includes(node.attr?.Align)) element.style.textAlign = node.attr.Align;
+    if (["left", "center", "right", "justify"].includes(node.attr?.Align)) element.classList.add(`law-table-align-${node.attr.Align}`);
     appendChildren(children, element, depth, nodePath);
   } else if (tag === "Sentence") {
     element.classList.add("law-sentence");

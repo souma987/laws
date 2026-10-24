@@ -132,9 +132,29 @@
     #content .law-list { margin: 0.75rem 0 0.75rem 2em; padding: 0.65rem 0.8rem; border: 1px solid #aeb7bd; }
     #content .law-table-frame { margin: 0.75rem 0 0.75rem 2em; padding: 0.65rem 0.8rem; border: 1px solid #aeb7bd; }
     #content .law-table { width: 100%; margin: 0.75rem 0; border-collapse: collapse; }
-    #content .law-table-two-column { table-layout: fixed !important; }
+    #content .law-table-two-column { table-layout: fixed; }
+    #content .law-table-two-column col { width: 50%; }
     #content .law-table-frame .law-table { margin: 0; }
     #content .law-table th, #content .law-table td { padding: 0.35rem 0.6rem; border: 1px solid #aeb7bd; vertical-align: top; }
+    #content .law-table .law-table-border-top-none { border-top-style: none; }
+    #content .law-table .law-table-border-right-none { border-right-style: none; }
+    #content .law-table .law-table-border-bottom-none { border-bottom-style: none; }
+    #content .law-table .law-table-border-left-none { border-left-style: none; }
+    #content .law-table .law-table-border-top-dotted { border-top-style: dotted; }
+    #content .law-table .law-table-border-right-dotted { border-right-style: dotted; }
+    #content .law-table .law-table-border-bottom-dotted { border-bottom-style: dotted; }
+    #content .law-table .law-table-border-left-dotted { border-left-style: dotted; }
+    #content .law-table .law-table-border-top-double { border-top: 3px double #aeb7bd; }
+    #content .law-table .law-table-border-right-double { border-right: 3px double #aeb7bd; }
+    #content .law-table .law-table-border-bottom-double { border-bottom: 3px double #aeb7bd; }
+    #content .law-table .law-table-border-left-double { border-left: 3px double #aeb7bd; }
+    #content .law-table .law-table-align-left { text-align: left; }
+    #content .law-table .law-table-align-center { text-align: center; }
+    #content .law-table .law-table-align-right { text-align: right; }
+    #content .law-table .law-table-align-justify { text-align: justify; }
+    #content .law-table td.law-table-subitem-cell { border-right: 1px solid #aeb7bd; border-left: 1px solid #aeb7bd; }
+    #content .law-table td.law-table-subitem-first { border-top: 1px solid #aeb7bd; }
+    #content .law-table td.law-table-subitem-last { border-bottom: 1px solid #aeb7bd; }
     #content .law-table-subitem-list { margin: 0.35rem 0 0.35rem 0.75em; padding: 0.35rem 0.6rem; border: 1px solid #aeb7bd; }
     #content .law-item { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: start; gap: 0 0.5rem; margin: 0.25rem 0; }
     #content .law-item:has(> .law-item-columns) { display: block; }
@@ -142,7 +162,7 @@
     #content .law-list > .law-item { margin-left: 0; }
     #content .law-item > .item-number { grid-column: 1; line-height: 1.8; white-space: nowrap; }
     #content .law-item > .law-sentence { grid-column: 2; margin-top: 0; }
-    #content .law-item > .law-item-columns { grid-column: 2; display: grid; align-items: start; column-gap: 1.25em; }
+    #content .law-item > .law-item-columns { grid-column: 2; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: start; column-gap: 1.25em; }
     #content .law-item-columns p { margin: 0; }
     #content .law-item-column-numbered { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 0.5em; }
     #content .law-item-column-numbered-content { min-width: 0; }
