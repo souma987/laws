@@ -29,8 +29,14 @@
     #right-tabs button { padding: 0.4rem 0; border: 0; border-bottom: 2px solid transparent; background: none; color: inherit; font: inherit; cursor: pointer; }
     #right-tabs button[aria-selected="true"] { border-bottom-color: currentColor; font-weight: 700; }
     #right-rail dl { margin: 0; }
-    #right-rail dt { margin-top: 0.9rem; font-weight: 700; }
-    #right-rail dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+    #right-rail .metadata-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6rem; margin-top: 0.65rem; }
+    #right-rail dt { flex: 0 0 auto; font-weight: 700; }
+    #right-rail dd { flex: 1 1 8rem; min-width: 8rem; margin: 0; overflow-wrap: anywhere; }
+    #right-rail .metadata-row:not(.metadata-row-stacked) dd { text-align: right; }
+    #right-rail .metadata-row-stacked dd { text-align: left; }
+    #right-rail .metadata-status-not-current dd { color: #b42318; }
+    #right-rail .metadata-row-stacked dd { flex: 1 0 100%; min-width: 0; padding-left: 0.75rem; }
+    #right-rail .metadata-section-row { grid-column: 1 / -1; margin-top: 1.2rem; padding-top: 0.55rem; border-top: 1px solid #aeb7bd; }
     #metadata-list .external-link-mark { white-space: nowrap; font-size: 0.85em; }
     #metadata-panel, #amendment-panel { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; }
     #metadata-panel[hidden], #amendment-panel[hidden] { display: none; }

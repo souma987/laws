@@ -455,23 +455,72 @@ function renderMetadata(data) {
     PreviousEnforced: "過去に施行",
     Repeal: "廃止"
   };
+  const lawTypes = {
+    Constitution: "憲法", Act: "法律", CabinetOrder: "政令", ImperialOrder: "勅令",
+    MinisterialOrdinance: "府省令", Rule: "規則", Misc: "その他"
+  };
+  const eras = { Meiji: "明治", Taisho: "大正", Showa: "昭和", Heisei: "平成", Reiwa: "令和" };
+  const amendmentTypes = { "1": "新規制定", "3": "被改正", "8": "廃止" };
+  const repealStatuses = {
+    Repeal: "廃止", Expire: "失効", LossOfEffectiveness: "効力喪失"
+  };
+  const lawTitle = revision.law_title || "";
+  const titleWithKana = lawTitle && revision.law_title_kana
+    ? `${lawTitle}（${revision.law_title_kana}）`
+    : lawTitle || revision.law_title_kana;
+  const formatUpdated = value => {
+    if (!value) return value;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const parts = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+    }).formatToParts(date);
+    const part = type => parts.find(entry => entry.type === type)?.value || "";
+    return `${part("year")}年${part("month")}月${part("day")}日 ${part("hour")}:${part("minute")}:${part("second")}`;
+  };
   const fields = [
-    ["法令ID", law.law_id, law.law_id ? `https://laws.e-gov.go.jp/law/${encodeURIComponent(law.law_id)}` : null],
+    ["法令種別", lawTypes[law.law_type] || law.law_type || revision.law_type],
+    ["分野", revision.category],
+    ["法令名", titleWithKana],
     ["法令番号", law.law_num],
-    ["公布日", law.promulgation_date],
+    ["法令ID", law.law_id, law.law_id ? `https://laws.e-gov.go.jp/law/${encodeURIComponent(law.law_id)}` : null],
+    ["公布日", law.promulgation_date
+      ? `${law.promulgation_date}${law.law_num_era && law.law_num_year != null
+        ? `（${eras[law.law_num_era] || law.law_num_era}${law.law_num_year}年）`
+        : ""}`
+      : null],
+    ["改正情報", "", null, true],
+    ["改正法令名", revision.amendment_law_title],
+    ["改正法令番号", revision.amendment_law_num],
     ["改正履歴ID", revision.law_revision_id, law.law_id && revision.law_revision_id
       ? `https://laws.e-gov.go.jp/law/${encodeURIComponent(law.law_id)}/${encodeURIComponent(revision.law_revision_id.slice(law.law_id.length + 1))}`
       : null],
-    ["改正法令番号", revision.amendment_law_num],
+    ["改正種別", amendmentTypes[String(revision.amendment_type)] || revision.amendment_type],
     ["改正公布日", revision.amendment_promulgate_date],
     ["施行日", revision.amendment_enforcement_date],
     ["施行予定日", revision.amendment_scheduled_enforcement_date],
+    ["施行期日の注記", revision.amendment_enforcement_comment],
     ["施行状況", statuses[revision.current_revision_status] || revision.current_revision_status],
-    ["データ更新日", revision.updated]
+    ...(revision.repeal_status && revision.repeal_status !== "None" ? [
+      ["廃止状況", repealStatuses[revision.repeal_status] || revision.repeal_status],
+      ["廃止後も効力を有する", revision.remain_in_force == null ? null : revision.remain_in_force ? "はい" : "いいえ"]
+    ] : []),
+    ["", "", null, true],
+    ["データ更新日時", formatUpdated(revision.updated)]
   ];
   const list = document.querySelector("#metadata-list");
-  fields.forEach(([label, value, href]) => {
+  fields.forEach(([label, value, href, section]) => {
+    if (section) {
+      const sectionRow = document.createElement("div");
+      sectionRow.className = "metadata-section-row";
+      list.append(sectionRow);
+      return;
+    }
     if (value == null || value === "") return;
+    const row = document.createElement("div");
+    row.className = "metadata-row";
+    if (label === "施行状況" && value !== "施行中") row.classList.add("metadata-status-not-current");
     const term = document.createElement("dt");
     term.textContent = label;
     const description = document.createElement("dd");
@@ -491,8 +540,30 @@ function renderMetadata(data) {
     } else {
       description.textContent = String(value);
     }
-    list.append(term, description);
+    row.append(term, description);
+    list.append(row);
   });
+  const fitMetadataRows = () => {
+    list.querySelectorAll(".metadata-row").forEach(row => {
+      const term = row.querySelector("dt");
+      const description = row.querySelector("dd");
+      const available = row.clientWidth;
+      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+      const termWidth = term.getBoundingClientRect().width;
+      const probe = description.cloneNode(true);
+      Object.assign(probe.style, {
+        position: "fixed", left: "-10000px", top: "0", width: "max-content",
+        minWidth: "0", maxWidth: "none", whiteSpace: "nowrap", flex: "none"
+      });
+      document.body.append(probe);
+      const preferredDescriptionWidth = probe.getBoundingClientRect().width;
+      probe.remove();
+      row.classList.toggle("metadata-row-stacked", termWidth + gap + preferredDescriptionWidth > available);
+    });
+  };
+  fitMetadataRows();
+  if ("ResizeObserver" in window) new ResizeObserver(fitMetadataRows).observe(list);
+  window.addEventListener("resize", fitMetadataRows);
   if (list.childElementCount) {
     document.querySelector("#metadata-panel").hidden = false;
     document.querySelector("#right-rail").hidden = false;
