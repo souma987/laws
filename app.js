@@ -935,6 +935,9 @@ async function load() {
     document.querySelector("#search-page").hidden = false;
     return;
   }
+  const homeLink = document.querySelector("#home-link");
+  homeLink.href = location.pathname;
+  homeLink.hidden = false;
   try {
     const response = await fetch(API + encodeURIComponent(lawId) + "?" + new URLSearchParams({ response_format: "json", law_full_text_format: "json", json_format: "full" }));
     if (!response.ok) throw new Error(`法令APIから本文を取得できませんでした（${response.status}）。`);
