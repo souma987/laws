@@ -703,8 +703,27 @@ function updateStickyPartTitles() {
   });
 }
 
+function updateActiveTocItem() {
+  const links = [...document.querySelectorAll("#toc-list .toc-link")];
+  if (!links.length) return;
+  const threshold = 24 + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-major-height")) || 0)
+    + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-chapter-height")) || 0);
+  let active = links[0];
+  for (const link of links) {
+    const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    if (target && target.getBoundingClientRect().top <= threshold) active = link;
+    else if (target) break;
+  }
+  links.forEach(link => {
+    if (link === active) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  });
+}
+
 window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
+window.addEventListener("scroll", updateActiveTocItem, { passive: true });
 window.addEventListener("resize", updateStickyHeadingHeight);
+window.addEventListener("resize", updateActiveTocItem);
 
 async function load() {
   if (!lawKey) {
@@ -785,6 +804,7 @@ async function load() {
       updateStickyHeadingHeight();
       updateStickyPartTitles();
       if (target) document.getElementById(target)?.scrollIntoView();
+      updateActiveTocItem();
     });
   } catch (error) {
     status.classList.add("error");
