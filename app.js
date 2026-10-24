@@ -299,7 +299,7 @@ function renderTocFromStructure(node, parent, path = [], depth = 0) {
     link.className = "toc-link";
     link.href = `#${structureId(childPath)}`;
     const title = textOf(titleNode.children).trim();
-    const titleParts = title.match(/^(第[〇零一二三四五六七八九十百千万億0-9０-９]+(?:編|章|節|款|目)(?:の[〇零一二三四五六七八九十百千万億0-9０-９]+)?)[\s　]+(.+)$/);
+    const titleParts = title.match(/^(第[〇零一二三四五六七八九十百千万億0-9０-９]+(?:編|章|節|款|目)(?:の[〇零一二三四五六七八九十百千万億0-9０-９]+)?(?:及び第[〇零一二三四五六七八九十百千万億0-9０-９]+(?:編|章|節|款|目)(?:の[〇零一二三四五六七八九十百千万億0-9０-９]+)?)*)[\s　]+(.+)$/);
     const number = document.createElement("span");
     number.className = "toc-number";
     if (titleParts) {
