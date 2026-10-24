@@ -85,6 +85,8 @@
     #search-page form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; }
     #search-page label { grid-column: 1 / -1; font-weight: 700; }
     #search-query { flex: 1; min-width: 0; padding: 0.75rem; font: inherit; }
+    #popular-laws { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; }
+    #popular-laws a { color: #0047ab; }
     #search-results { padding-left: 1.5rem; }
     #search-results li { margin: 1rem 0; }
     #content { margin-top: 2rem; }
@@ -181,6 +183,15 @@
             <input id="search-query" type="search" name="keyword" placeholder="法令名、キーワード、法令ID" required>
             <button type="submit">検索</button>
           </form>
+          <nav id="popular-laws" aria-label="主な法令">
+            <a href="?id=321CONSTITUTION">憲法</a>
+            <a href="?id=129AC0000000089">民法</a>
+            <a href="?id=132AC0000000048">商法</a>
+            <a href="?id=417AC0000000086">会社法</a>
+            <a href="?id=140AC0000000045">刑法</a>
+            <a href="?id=408AC0000000109">民事訴訟法</a>
+            <a href="?id=323AC0000000131">刑事訴訟法</a>
+          </nav>
           <p id="search-status" role="status" aria-live="polite"></p>
           <ol id="search-results"></ol>
         </section>
