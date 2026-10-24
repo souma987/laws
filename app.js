@@ -4,6 +4,15 @@ const params = new URLSearchParams(location.search);
 const lawKey = params.get("law_id") || params.get("law_num") || params.get("law_revision_id") || params.get("id");
 const status = document.querySelector("#status");
 const content = document.querySelector("#content");
+
+content.addEventListener("click", event => {
+  const heading = event.target.closest("h2, h3, h4, h5, h6");
+  const articleHeading = event.target.closest(".article-heading");
+  const target = heading?.parentElement || (articleHeading ? articleHeading.closest(".law-article") : null);
+  if (!target || !content.contains(target) || !target.id) return;
+  history.replaceState(null, "", `${location.pathname}${location.search}#${encodeURIComponent(target.id)}`);
+  target.scrollIntoView({ block: "start", behavior: "smooth" });
+});
 let currentLawNumber = "";
 
 function textOf(value) {
