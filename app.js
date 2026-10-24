@@ -64,7 +64,7 @@ content.addEventListener("click", event => {
   const articleHeading = event.target.closest(".article-heading");
   const target = heading?.parentElement || (articleHeading ? articleHeading.closest(".law-article") : null);
   if (!target || !content.contains(target) || !target.id) return;
-  target.scrollIntoView({ block: "start", behavior: "smooth" });
+  navigateToMarker(`#${target.id}`, target, "smooth");
 });
 let currentLawNumber = "";
 
@@ -278,24 +278,34 @@ function formatArticleNumberRange(numbers) {
   return `${formatArticleNumber(first)}–${formatArticleNumber(last)}`;
 }
 
-function renderTocFromStructure(node, parent, path = [], depth = 0) {
+function hasStructureBelowChapter(node) {
+  const children = Array.isArray(node) ? node : node?.children || [];
+  return children.some(child => child && typeof child === "object"
+    && (["Section", "Subsection", "Division"].includes(child.tag)
+      || hasStructureBelowChapter(child)));
+}
+
+function renderTocFromStructure(node, parent, path = [], depth = 0, chapterIsLowest = false) {
   const children = Array.isArray(node) ? node : node?.children || [];
   children.forEach(child => {
     if (!child || typeof child !== "object" || child.tag === "TOC") return;
     if (!structuralTags.has(child.tag)) {
-      renderTocFromStructure(child, parent, path, depth);
+      renderTocFromStructure(child, parent, path, depth, chapterIsLowest);
       return;
     }
     const tag = child.tag;
     const titleNode = (child.children || []).find(item => item?.tag === `${tag}Title`);
     if (!titleNode) {
-      renderTocFromStructure(child, parent, path, depth);
+      renderTocFromStructure(child, parent, path, depth, chapterIsLowest);
       return;
     }
     const childPath = [...path, structureSegment(tag, child.attr?.Num ?? "0")];
     const item = document.createElement("li");
     item.className = depth === 0 ? "toc-top-level" : depth === 1 ? "toc-sublevel" : "toc-detail";
     item.classList.add(`toc-${tag.toLowerCase()}`);
+    if (tag === "Chapter" && chapterIsLowest) {
+      item.classList.add("toc-chapter-leaf");
+    }
     const link = document.createElement("a");
     link.className = "toc-link";
     link.href = `#${structureId(childPath)}`;
@@ -321,7 +331,7 @@ function renderTocFromStructure(node, parent, path = [], depth = 0) {
     }
     item.append(link);
     parent.append(item);
-    renderTocFromStructure(child, parent, childPath, depth + 1);
+    renderTocFromStructure(child, parent, childPath, depth + 1, chapterIsLowest);
   });
 }
 
@@ -897,7 +907,6 @@ function updateActiveTocItem() {
     if (link === active) link.setAttribute("aria-current", "location");
     else link.removeAttribute("aria-current");
   });
-  if (!restoringMarker) setUrlMarker(active?.hash || "#title");
 }
 
 window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
@@ -929,7 +938,10 @@ async function load() {
     if (mainProvision || supplementaryProvisions.length) {
       const list = document.createElement("ul");
       list.id = "toc-list";
-      if (mainProvision) renderTocFromStructure(mainProvision, list);
+      if (mainProvision) {
+        const chapterIsLowest = !hasStructureBelowChapter(mainProvision);
+        renderTocFromStructure(mainProvision, list, [], 0, chapterIsLowest);
+      }
       if (supplementaryProvisions.length) {
         const group = document.createElement("li");
         group.className = "toc-top-level toc-part toc-supplementary-heading";
