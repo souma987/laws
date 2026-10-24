@@ -915,8 +915,21 @@ window.addEventListener("resize", updateStickyHeadingHeight);
 window.addEventListener("resize", updateActiveTocItem);
 
 async function load() {
+  const setPageMetadata = (title, description) => {
+    document.title = title;
+    document.querySelector('meta[name="description"]').content = description;
+    document.querySelector('meta[property="og:title"]').content = title;
+    document.querySelector('meta[property="og:description"]').content = description;
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.append(canonical);
+    }
+    canonical.href = `${location.origin}${location.pathname}${location.search}`;
+  };
   if (!lawId) {
-    document.title = "法令検索";
+    setPageMetadata("法令検索 | 法令本文", "法令名や法令番号から日本の法令を検索し、条文と改正履歴を確認できます。");
     document.querySelector("#title").textContent = "法令検索";
     status.hidden = true;
     document.querySelector("#search-page").hidden = false;
@@ -929,8 +942,9 @@ async function load() {
     if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
     currentLawNumber = data.law_info?.law_num || "";
-    document.title = `${title} | 法令本文`;
-    document.querySelector("#title").textContent = typeof title === "string" ? title : textOf(title);
+    const plainTitle = typeof title === "string" ? title : textOf(title);
+    setPageMetadata(`${plainTitle} | 法令本文`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
+    document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
     if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
     const mainProvision = findTag(data.law_full_text, "MainProvision");
