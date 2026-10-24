@@ -91,9 +91,11 @@
     #search-results li { margin: 1rem 0; }
     #view-history { margin-top: 2rem; }
     #view-history h2 { font-size: 1.25rem; }
+    #pinned-laws-list { margin: 0; padding-left: 2rem; }
+    #pinned-laws-list li { margin: 0.75rem 0; }
+    #pinned-laws-list button, #view-history-list button { float: right; margin-left: 0.75rem; }
     #view-history-list { margin: 0; padding-left: 2rem; }
     #view-history-list li { margin: 0.75rem 0; }
-    #view-history-list button { float: right; margin-left: 0.75rem; }
     #content { margin-top: 2rem; }
     #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }
     #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division { scroll-margin-top: calc(0.5rem + var(--sticky-major-height, 3rem) + var(--sticky-chapter-height, 2.5rem)); }
@@ -201,6 +203,10 @@
           <p id="search-status" role="status" aria-live="polite"></p>
           <ol id="search-results"></ol>
           <section id="view-history" aria-labelledby="view-history-heading">
+            <section id="pinned-laws" aria-labelledby="pinned-laws-heading" hidden>
+              <h2 id="pinned-laws-heading">固定した法令</h2>
+              <ol id="pinned-laws-list"></ol>
+            </section>
             <h2 id="view-history-heading">最近見た法令</h2>
             <ol id="view-history-list"></ol>
           </section>

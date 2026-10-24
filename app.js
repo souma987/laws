@@ -2,6 +2,7 @@ const API = "https://laws.e-gov.go.jp/api/2/law_data/";
 const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const VIEW_HISTORY_KEY = "law-view-history";
+const PINNED_LAWS_KEY = "law-pinned-laws";
 const params = new URLSearchParams(location.search);
 const lawId = params.get("id");
 const status = document.querySelector("#status");
@@ -78,29 +79,79 @@ function readViewHistory() {
   }
 }
 
+function readPinnedLaws() {
+  try {
+    const pinned = JSON.parse(localStorage.getItem(PINNED_LAWS_KEY) || "[]");
+    return Array.isArray(pinned) ? pinned.filter(entry => entry && typeof entry.id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePinnedLaws(pinned) {
+  try {
+    localStorage.setItem(PINNED_LAWS_KEY, JSON.stringify(pinned));
+  } catch { /* Keep the current page usable when storage is unavailable. */ }
+}
+
+function makeLawLink(entry) {
+  const link = document.createElement("a");
+  link.href = `?${new URLSearchParams({ id: entry.id })}`;
+  link.textContent = entry.title || entry.id;
+  return link;
+}
+
+function makeDeleteButton(entry, onDelete, label, buttonText = "削除") {
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = buttonText;
+  remove.setAttribute("aria-label", `${entry.title || entry.id}を${label}から${buttonText}`);
+  remove.addEventListener("click", onDelete);
+  return remove;
+}
+
 function renderViewHistory() {
   const list = document.querySelector("#view-history-list");
   if (!list) return;
-  list.replaceChildren();
-  for (const entry of readViewHistory().slice(0, 10)) {
+  const pinnedList = document.querySelector("#pinned-laws-list");
+  const pinnedSection = document.querySelector("#pinned-laws");
+  const pinned = readPinnedLaws();
+  const pinnedIds = new Set(pinned.map(entry => entry.id));
+  pinnedList.replaceChildren();
+  for (const entry of pinned) {
     const item = document.createElement("li");
-    const link = document.createElement("a");
-    link.href = `?${new URLSearchParams({ id: entry.id })}`;
-    link.textContent = entry.title || entry.id;
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.textContent = "削除";
-    remove.setAttribute("aria-label", `${entry.title || entry.id}を閲覧履歴から削除`);
-    remove.addEventListener("click", () => {
+    item.append(makeLawLink(entry));
+    item.append(makeDeleteButton(entry, () => {
+      writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
+      renderViewHistory();
+    }, "固定一覧", "解除"));
+    pinnedList.append(item);
+  }
+  pinnedSection.hidden = pinned.length === 0;
+  list.replaceChildren();
+  for (const entry of readViewHistory().filter(entry => !pinnedIds.has(entry.id)).slice(0, 10)) {
+    const item = document.createElement("li");
+    item.append(makeLawLink(entry));
+    const remove = makeDeleteButton(entry, () => {
       try {
         localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(readViewHistory().filter(item => item.id !== entry.id)));
       } catch { /* Keep the current page usable when storage is unavailable. */ }
       renderViewHistory();
+    }, "閲覧履歴");
+    const pin = document.createElement("button");
+    pin.type = "button";
+    pin.textContent = "固定";
+    pin.setAttribute("aria-label", `${entry.title || entry.id}を固定`);
+    pin.addEventListener("click", () => {
+      const nextPinned = readPinnedLaws().filter(item => item.id !== entry.id);
+      nextPinned.push(entry);
+      writePinnedLaws(nextPinned);
+      renderViewHistory();
     });
-    item.append(link, remove);
+    item.append(remove, pin);
     list.append(item);
   }
-  document.querySelector("#view-history").hidden = list.childElementCount === 0;
+  document.querySelector("#view-history").hidden = list.childElementCount === 0 && pinned.length === 0;
 }
 
 function rememberLaw(id, title) {
