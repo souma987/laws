@@ -582,42 +582,19 @@ function renderMetadata(data) {
   }
 }
 
-function selectRightTab(tab, moveFocus = false) {
-  const tabs = [...document.querySelectorAll('#right-tabs [role="tab"]')];
-  const panels = [document.querySelector('#metadata-panel'), document.querySelector('#amendment-panel')];
-  const selectedIndex = tabs.indexOf(tab);
-  tabs.forEach((item, index) => {
-    const selected = index === selectedIndex;
-    item.setAttribute('aria-selected', String(selected));
-    item.tabIndex = selected ? 0 : -1;
-    panels[index].hidden = !selected;
-  });
-  if (tab.id === "amendment-tab") {
-    requestAnimationFrame(scrollCurrentAmendmentIntoView);
-  }
-  if (moveFocus) tab.focus();
-}
-
-function scrollCurrentAmendmentIntoView() {
-  const panel = document.querySelector("#amendment-panel");
-  const item = panel.querySelector(".current-amendment");
-  if (!item || panel.hidden) return;
-  const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
-  panel.scrollTop += item.getBoundingClientRect().top - panelTop;
-}
-
-document.querySelector('#right-tabs').addEventListener('click', event => {
-  const tab = event.target.closest('[role="tab"]');
-  if (tab) selectRightTab(tab);
-});
-document.querySelector('#right-tabs').addEventListener('keydown', event => {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-  const tabs = [...document.querySelectorAll('#right-tabs [role="tab"]')];
-  const current = tabs.indexOf(document.activeElement);
-  const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
-    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+document.querySelector("#right-nav").addEventListener("click", event => {
+  const link = event.target.closest("a[href^='#']");
+  if (!link) return;
+  const target = document.querySelector(link.getAttribute("href"));
+  const scrollArea = document.querySelector("#right-scroll");
+  if (!target || !scrollArea) return;
   event.preventDefault();
-  selectRightTab(tabs[index], true);
+  const railTop = scrollArea.getBoundingClientRect().top;
+  const targetTop = target.getBoundingClientRect().top;
+  scrollArea.scrollTo({
+    top: scrollArea.scrollTop + targetTop - railTop,
+    behavior: "smooth"
+  });
 });
 
 async function loadAmendmentHistory(lawId, currentRevisionId) {
@@ -663,7 +640,6 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       empty.textContent = "改正履歴はありません。";
       list.append(empty);
     }
-    requestAnimationFrame(scrollCurrentAmendmentIntoView);
   } catch {
     const error = document.createElement("li");
     error.textContent = "改正履歴を取得できませんでした。";

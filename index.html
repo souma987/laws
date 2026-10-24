@@ -34,10 +34,11 @@
     #article-jump-controls { display: flex; gap: 0.5rem; }
     #article-jump-input { flex: 1 1 auto; min-width: 0; }
     #right-rail { position: sticky; top: 1.5rem; align-self: start; display: flex; flex-direction: column; height: calc(100vh - 3rem); min-height: 0; }
-    #right-rail h2 { margin: 0 0 1rem; font-size: 1.1rem; }
-    #right-tabs { display: flex; gap: 1rem; border-bottom: 1px solid #aeb7bd; }
-    #right-tabs button { padding: 0.4rem 0; border: 0; border-bottom: 2px solid transparent; background: none; color: inherit; font: inherit; cursor: pointer; }
-    #right-tabs button[aria-selected="true"] { border-bottom-color: currentColor; font-weight: 700; }
+    #right-nav { flex: 0 0 auto; display: flex; gap: 1rem; padding: 0.25rem 0 0.75rem; background: #fff; }
+    #right-nav a { color: inherit; }
+    #right-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    #right-rail h2 { margin: 0 0 0.75rem; font-size: 1.1rem; scroll-margin-top: 3rem; }
+    #right-rail section + section { margin-top: 5rem; }
     #right-rail dl { margin: 0; }
     #right-rail .metadata-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6rem; margin-top: 0.65rem; }
     #right-rail dt { flex: 0 0 auto; font-weight: 700; }
@@ -48,8 +49,7 @@
     #right-rail .metadata-row-stacked dd { flex: 1 0 100%; min-width: 0; padding-left: 0.75rem; }
     #right-rail .metadata-section-row { grid-column: 1 / -1; margin-top: 1.2rem; padding-top: 0.55rem; border-top: 1px solid #aeb7bd; }
     #metadata-list .external-link-mark { white-space: nowrap; font-size: 0.85em; }
-    #metadata-panel, #amendment-panel { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; }
-    #metadata-panel[hidden], #amendment-panel[hidden] { display: none; }
+    #metadata-panel, #amendment-panel { flex: 0 0 auto; min-width: 0; }
     #amendment-list { margin: 0; padding-left: 2.25em; }
     #amendment-list li { margin: 0.85rem 0; }
     #amendment-list li.current-amendment { padding: 0.5rem; border: 1px solid #aeb7bd; }
@@ -149,6 +149,7 @@
       main { width: calc(100% - 2rem); margin: 0 auto; }
       #layout { display: block; }
       #left-rail, #right-rail { position: static; height: auto; max-height: none; margin-bottom: 2rem; }
+      #right-scroll { overflow: visible; }
       #toc-panel { max-height: none; }
       #metadata-panel, #amendment-panel { max-height: none; overflow: visible; }
     }
@@ -201,16 +202,20 @@
         </footer>
       </div>
       <div id="right-rail" hidden>
-        <div id="right-tabs" role="tablist" aria-label="右パネル">
-          <button id="metadata-tab" type="button" role="tab" aria-selected="true" aria-controls="metadata-panel" tabindex="0">法令情報</button>
-          <button id="amendment-tab" type="button" role="tab" aria-selected="false" aria-controls="amendment-panel" tabindex="-1">改正</button>
+        <nav id="right-nav" aria-label="右パネル内の項目">
+          <a href="#metadata-heading">▲法令情報</a>
+          <a href="#amendment-heading">▼改正一覧</a>
+        </nav>
+        <div id="right-scroll">
+          <section id="metadata-panel" aria-labelledby="metadata-heading">
+            <h2 id="metadata-heading">法令情報</h2>
+            <dl id="metadata-list"></dl>
+          </section>
+          <section id="amendment-panel" aria-labelledby="amendment-heading">
+            <h2 id="amendment-heading">改正一覧</h2>
+            <ol id="amendment-list"></ol>
+          </section>
         </div>
-        <aside id="metadata-panel" role="tabpanel" aria-labelledby="metadata-tab">
-          <dl id="metadata-list"></dl>
-        </aside>
-        <aside id="amendment-panel" role="tabpanel" aria-labelledby="amendment-tab" hidden>
-          <ol id="amendment-list"></ol>
-        </aside>
       </div>
     </div>
   </main>
