@@ -1053,6 +1053,14 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
     location.href = `?${new URLSearchParams({ id: query.toUpperCase() })}`;
     return;
   }
+  const url = new URL(location.href);
+  url.search = new URLSearchParams({ search: query }).toString();
+  url.hash = "";
+  history.pushState(null, "", url);
+  await runSearch(query);
+});
+
+async function runSearch(query) {
   const searchStatus = document.querySelector("#search-status");
   const results = document.querySelector("#search-results");
   const params = new URLSearchParams({ law_title: query, limit: "100", offset: "0", response_format: "json" });
@@ -1086,6 +1094,24 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
     }
   } catch (error) {
     searchStatus.textContent = `${error.message} 時間をおいて再試行してください。`;
+  }
+}
+
+const initialSearch = new URLSearchParams(location.search).get("search");
+if (initialSearch) {
+  document.querySelector("#search-query").value = initialSearch;
+  runSearch(initialSearch);
+}
+
+window.addEventListener("popstate", () => {
+  if (lawId) return;
+  const query = new URLSearchParams(location.search).get("search") || "";
+  document.querySelector("#search-query").value = query;
+  if (query) runSearch(query);
+  else {
+    document.querySelector("#search-results").replaceChildren();
+    document.querySelector("#search-status").textContent = "";
+    document.querySelector("#view-history").hidden = false;
   }
 });
 
