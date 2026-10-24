@@ -4,13 +4,65 @@ const params = new URLSearchParams(location.search);
 const lawKey = params.get("law_id") || params.get("law_num") || params.get("law_revision_id") || params.get("id");
 const status = document.querySelector("#status");
 const content = document.querySelector("#content");
+const previousMarkerButton = document.querySelector("#previous-marker");
+const nextMarkerButton = document.querySelector("#next-marker");
+const markerHistory = [location.hash || "#title"];
+let markerHistoryIndex = 0;
+let restoringMarker = false;
+
+function updateMarkerButtons() {
+  previousMarkerButton.disabled = markerHistoryIndex === 0;
+  nextMarkerButton.disabled = markerHistoryIndex >= markerHistory.length - 1;
+}
+
+function setUrlMarker(hash, { remember = true } = {}) {
+  const targetHash = hash || "#title";
+  if (location.hash === targetHash) return;
+  if (remember) {
+    markerHistory.splice(markerHistoryIndex + 1);
+    markerHistory.push(targetHash);
+    markerHistoryIndex = markerHistory.length - 1;
+  }
+  history.replaceState(null, "", `${location.pathname}${location.search}${targetHash}`);
+  updateMarkerButtons();
+}
+
+function navigateToMarker(hash, target, behavior = "auto") {
+  setUrlMarker(hash);
+  target?.scrollIntoView({ block: "start", behavior });
+}
+
+function moveInMarkerHistory(offset) {
+  const nextIndex = markerHistoryIndex + offset;
+  if (nextIndex < 0 || nextIndex >= markerHistory.length) return;
+  markerHistoryIndex = nextIndex;
+  const targetHash = markerHistory[markerHistoryIndex];
+  history.replaceState(null, "", `${location.pathname}${location.search}${targetHash}`);
+  updateMarkerButtons();
+  restoringMarker = true;
+  const target = document.getElementById(decodeURIComponent(targetHash.slice(1)));
+  target?.scrollIntoView({ block: "start" });
+  window.addEventListener("scrollend", () => { restoringMarker = false; }, { once: true });
+  window.setTimeout(() => { restoringMarker = false; }, 500);
+}
+
+previousMarkerButton.addEventListener("click", () => moveInMarkerHistory(-1));
+nextMarkerButton.addEventListener("click", () => moveInMarkerHistory(1));
+
+document.querySelector("#toc").addEventListener("click", event => {
+  const link = event.target.closest("a.toc-link");
+  if (!link) return;
+  const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+  if (!target) return;
+  event.preventDefault();
+  navigateToMarker(link.hash, target);
+});
 
 content.addEventListener("click", event => {
   const heading = event.target.closest("h2, h3, h4, h5, h6");
   const articleHeading = event.target.closest(".article-heading");
   const target = heading?.parentElement || (articleHeading ? articleHeading.closest(".law-article") : null);
   if (!target || !content.contains(target) || !target.id) return;
-  history.replaceState(null, "", `${location.pathname}${location.search}#${encodeURIComponent(target.id)}`);
   target.scrollIntoView({ block: "start", behavior: "smooth" });
 });
 let currentLawNumber = "";
@@ -150,17 +202,26 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   const articles = mainArticles.length ? mainArticles : [...content.querySelectorAll(".law-article")];
   const article = nearestArticle(number, articles);
   if (!article) return;
-  history.replaceState(null, "", `${location.pathname}${location.search}#${article.id}`);
-  article.scrollIntoView({ block: "start" });
+  navigateToMarker(`#${article.id}`, article);
 });
 
 document.addEventListener("keydown", event => {
-  if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
-  if (event.target.closest("input, textarea, select, button, [contenteditable='true']")) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const interactive = event.target.closest("input, textarea, select, button, a, [contenteditable='true']");
+  if (event.key === "/" && !interactive) {
+    event.preventDefault();
+    const input = document.querySelector("#article-jump-input");
+    input.focus();
+    input.select();
+    return;
+  }
+  if (event.shiftKey || interactive) return;
+  const offset = ["h", "ArrowLeft"].includes(event.key) ? -1
+    : ["l", "ArrowRight"].includes(event.key) ? 1
+      : 0;
+  if (!offset) return;
   event.preventDefault();
-  const input = document.querySelector("#article-jump-input");
-  input.focus();
-  input.select();
+  moveInMarkerHistory(offset);
 });
 
 function findTag(node, tag) {
@@ -697,8 +758,6 @@ function updateStickyHeadingHeight() {
       partTitle.className = "sticky-part-title";
       partTitle.textContent = partHeading.textContent;
       chapterHeading.prepend(partTitle);
-      chapterHeading.dataset.stickyStart = String(part.getBoundingClientRect().top + window.scrollY + chapterHeading.offsetTop);
-      chapterHeading.dataset.stickyPartEnd = String(part.getBoundingClientRect().top + window.scrollY + part.offsetHeight);
     });
   });
   const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")]
@@ -710,10 +769,12 @@ function updateStickyHeadingHeight() {
 }
 
 function updateStickyPartTitles() {
-  content.querySelectorAll(".law-structure-chapter > h3[data-sticky-start]").forEach(heading => {
-    const start = Number(heading.dataset.stickyStart);
-    const partEnd = Number(heading.dataset.stickyPartEnd);
-    const stuck = window.scrollY >= start - 8 && window.scrollY + 8 + heading.offsetHeight < partEnd;
+  content.querySelectorAll(".law-structure-chapter > h3:has(.sticky-part-title)").forEach(heading => {
+    const part = heading.closest(".law-structure-part");
+    const headingRect = heading.getBoundingClientRect();
+    const partBottom = part?.getBoundingClientRect().bottom ?? 0;
+    const stickyTop = Number.parseFloat(getComputedStyle(heading).top) || 0;
+    const stuck = headingRect.top <= stickyTop + 1 && partBottom > stickyTop + heading.offsetHeight;
     heading.classList.toggle("is-sticky", stuck);
   });
 }
@@ -723,7 +784,7 @@ function updateActiveTocItem() {
   if (!links.length) return;
   const threshold = 24 + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-major-height")) || 0)
     + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-chapter-height")) || 0);
-  let active = links[0];
+  let active = null;
   for (const link of links) {
     const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
     if (target && target.getBoundingClientRect().top <= threshold) active = link;
@@ -733,6 +794,7 @@ function updateActiveTocItem() {
     if (link === active) link.setAttribute("aria-current", "location");
     else link.removeAttribute("aria-current");
   });
+  if (!restoringMarker) setUrlMarker(active?.hash || "#title");
 }
 
 window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
