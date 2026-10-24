@@ -608,7 +608,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
   }
 
   if (element.textContent.trim() || element.children.length) {
-    if (tag === "Article" && parent.lastElementChild?.classList.contains("law-article")) {
+    if ((tag === "Article" || titleNode) && parent.lastElementChild?.classList.contains("law-article")) {
       const separator = document.createElement("hr");
       separator.className = "article-separator";
       parent.append(separator);
@@ -620,12 +620,38 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
 function updateStickyHeadingHeight() {
   content.style.removeProperty("--sticky-major-height");
   content.style.removeProperty("--sticky-chapter-height");
-  const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")].map(heading => heading.offsetHeight));
+  const partHeadings = [...content.querySelectorAll(".law-structure-part")]
+    .filter(part => part.querySelector(".law-structure-chapter"));
+  partHeadings.forEach(part => {
+    const partHeading = part.querySelector(":scope > h2");
+    part.querySelectorAll(".law-structure-chapter > h3").forEach(chapterHeading => {
+      if (chapterHeading.querySelector(".sticky-part-title")) return;
+      const partTitle = document.createElement("span");
+      partTitle.className = "sticky-part-title";
+      partTitle.textContent = partHeading.textContent;
+      chapterHeading.prepend(partTitle);
+      chapterHeading.dataset.stickyStart = String(part.getBoundingClientRect().top + window.scrollY + chapterHeading.offsetTop);
+      chapterHeading.dataset.stickyPartEnd = String(part.getBoundingClientRect().top + window.scrollY + part.offsetHeight);
+    });
+  });
+  const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")]
+    .filter(heading => !heading.parentElement.matches(".law-structure-part:has(.law-structure-chapter)"))
+    .map(heading => heading.offsetHeight));
   const chapterHeight = Math.max(0, ...[...content.querySelectorAll("h3")].map(heading => heading.offsetHeight));
   content.style.setProperty("--sticky-major-height", `${majorHeight}px`);
   content.style.setProperty("--sticky-chapter-height", `${chapterHeight}px`);
 }
 
+function updateStickyPartTitles() {
+  content.querySelectorAll(".law-structure-chapter > h3[data-sticky-start]").forEach(heading => {
+    const start = Number(heading.dataset.stickyStart);
+    const partEnd = Number(heading.dataset.stickyPartEnd);
+    const stuck = window.scrollY >= start - 8 && window.scrollY + 8 + heading.offsetHeight < partEnd;
+    heading.classList.toggle("is-sticky", stuck);
+  });
+}
+
+window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
 window.addEventListener("resize", updateStickyHeadingHeight);
 
 async function load() {
@@ -641,7 +667,6 @@ async function load() {
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
     document.title = `${title} | 法令本文`;
     document.querySelector("#title").textContent = typeof title === "string" ? title : textOf(title);
-    document.querySelector("#law-number").textContent = data.law_info?.law_num || "";
     renderMetadata(data);
     if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
     const mainProvision = findTag(data.law_full_text, "MainProvision");
@@ -663,6 +688,7 @@ async function load() {
     const target = decodeURIComponent(location.hash.slice(1));
     requestAnimationFrame(() => {
       updateStickyHeadingHeight();
+      updateStickyPartTitles();
       if (target) document.getElementById(target)?.scrollIntoView();
     });
   } catch (error) {
