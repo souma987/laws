@@ -500,10 +500,36 @@ function renderMetadata(data) {
   }
 }
 
+function selectRightTab(tab, moveFocus = false) {
+  const tabs = [...document.querySelectorAll('#right-tabs [role="tab"]')];
+  const panels = [document.querySelector('#metadata-panel'), document.querySelector('#amendment-panel')];
+  const selectedIndex = tabs.indexOf(tab);
+  tabs.forEach((item, index) => {
+    const selected = index === selectedIndex;
+    item.setAttribute('aria-selected', String(selected));
+    item.tabIndex = selected ? 0 : -1;
+    panels[index].hidden = !selected;
+  });
+  if (moveFocus) tab.focus();
+}
+
+document.querySelector('#right-tabs').addEventListener('click', event => {
+  const tab = event.target.closest('[role="tab"]');
+  if (tab) selectRightTab(tab);
+});
+document.querySelector('#right-tabs').addEventListener('keydown', event => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll('#right-tabs [role="tab"]')];
+  const current = tabs.indexOf(document.activeElement);
+  const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  event.preventDefault();
+  selectRightTab(tabs[index], true);
+});
+
 async function loadAmendmentHistory(lawId, currentRevisionId) {
   const panel = document.querySelector("#amendment-panel");
   const list = document.querySelector("#amendment-list");
-  panel.hidden = false;
   document.querySelector("#right-rail").hidden = false;
   document.querySelector("#layout").classList.add("has-metadata");
   try {
