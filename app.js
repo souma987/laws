@@ -185,7 +185,7 @@ function formatSupplementaryLawNumber(value) {
     ? [...number].map(character => ({ 〇: "0", 零: "0", 一: "1", 二: "2", 三: "3", 四: "4", 五: "5", 六: "6", 七: "7", 八: "8", 九: "9" })[character]).join("")
     : kanjiArticleTitleToArabic(number);
   return String(value).replace(
-    /^(明治|大正|昭和|平成|令和)([^年]+)年(?:(.+?月.+?日))?(法律|政令|勅令|府令|省令|規則|条例)第([^号]+)号$/,
+    /^(明治|大正|昭和|平成|令和)([^年]+)年(?:(.+?月.+?日))?([^第]+)第([^号]+)号$/,
     (_, era, year, _date, kind, number) => `${era}${toArabic(year)}年${kind}第${toArabic(number)}号`
   );
 }
