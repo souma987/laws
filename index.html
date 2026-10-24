@@ -26,7 +26,7 @@
     #left-rail[hidden], #right-rail[hidden] { display: none; }
     #left-rail { position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; max-height: calc(100vh - 3rem); min-height: 0; }
     #article-jump-panel { flex: 0 0 auto; }
-    #toc-panel { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    #toc-panel { flex: 1 1 auto; min-height: 0; overflow: auto; padding-inline-end: 4px; scrollbar-gutter: stable; }
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
     #article-jump { margin: 0; }
     #article-jump-panel #home-link { display: inline-block; margin-bottom: 1rem; color: #0047ab; }
@@ -36,7 +36,7 @@
     #right-rail { position: sticky; top: 1.5rem; align-self: start; display: flex; flex-direction: column; height: calc(100vh - 3rem); min-height: 0; }
     #right-nav { flex: 0 0 auto; display: flex; gap: 1rem; padding: 0.25rem 0 0.75rem; background: #fff; }
     #right-nav a { color: inherit; }
-    #right-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    #right-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-inline-end: 4px; scrollbar-gutter: stable; }
     #right-rail h2 { margin: 0 0 0.75rem; font-size: 1.1rem; scroll-margin-top: 3rem; }
     #right-rail section + section { margin-top: 5rem; }
     #right-rail dl { margin: 0; }
