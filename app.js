@@ -660,7 +660,11 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
 
   if (element.textContent.trim() || element.children.length) {
     const previous = parent.lastElementChild;
-    if ((tag === "Article" || titleNode) && previous?.classList.contains("law-article")) {
+    let previousContent = previous;
+    while (previousContent && !previousContent.classList.contains("law-article") && previousContent.lastElementChild) {
+      previousContent = previousContent.lastElementChild;
+    }
+    if ((tag === "Article" || titleNode) && previousContent?.classList.contains("law-article")) {
       const separator = document.createElement("hr");
       separator.className = "article-separator";
       parent.append(separator);

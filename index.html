@@ -65,13 +65,14 @@
     #content .law-parenthetical { color: #667085; }
     #content .law-quotation, #content .law-quotation .law-parenthetical { color: #000; }
     #content section { margin: 1.5rem 0; }
+    #content section.law-article { margin: 0.5rem 0; }
     #content h2, #content h3, #content h4, #content h5, #content h6 { margin: 1.5rem 0 0.75rem; }
     #content p { margin: 0.75rem 0; line-height: 1.8; }
-    #content .article-heading { color: #0047ab; }
+    #content .article-heading { margin: 0.25rem 0; color: #0047ab; }
     #content .article-heading strong[data-article-number] { color: #202a31; }
     #content .law-supplementary-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding-bottom: 0.45rem; border-bottom: 1px solid #aeb7bd; font-size: 1.25rem; font-weight: 700; }
     #content .law-supplementary-law-number { text-align: right; font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
-    #content hr.article-separator { margin: 1.5rem 0; border: 0; border-top: 1px solid #d8dcdf; }
+    #content hr.article-separator { margin: 1rem 0; border: 0; border-top: 1px solid #d8dcdf; }
     #content h2 { font-size: 1.75rem; }
     #content h3 { font-size: 1.5rem; }
     #content h4 { font-size: 1.3rem; }
@@ -84,8 +85,8 @@
     #content .law-structure-chapter:has(.sticky-part-title) > h3 { top: 0.5rem; white-space: nowrap; overflow: hidden; }
     #content .sticky-part-title { display: none; margin-right: 3rem; flex: 0 0 auto; }
     #content h3.is-sticky .sticky-part-title { display: inline; }
-    #content .law-paragraph { margin: 1rem 0; }
-    #content .law-sentence { margin: 0.5rem 0; line-height: 1.8; }
+    #content .law-paragraph { margin: 0; }
+    #content .law-sentence { margin: 0.35rem 0; line-height: 1.8; }
     #content .law-sentence.has-number { display: grid; grid-template-columns: 3.5em minmax(0, 1fr); }
     #content .paragraph-number { grid-column: 1; }
     #content .law-sentence.has-number > .sentence-text { grid-column: 2; }
