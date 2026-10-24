@@ -1,4 +1,5 @@
 const API = "https://laws.e-gov.go.jp/api/2/law_data/";
+const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const params = new URLSearchParams(location.search);
 const lawId = params.get("law_id");
@@ -906,7 +907,10 @@ window.addEventListener("resize", updateActiveTocItem);
 
 async function load() {
   if (!lawId) {
-    status.textContent = "URLに法令IDを指定してください。例：?law_id=411AC0000000127";
+    document.title = "法令検索";
+    document.querySelector("#title").textContent = "法令検索";
+    status.hidden = true;
+    document.querySelector("#search-page").hidden = false;
     return;
   }
   try {
@@ -990,5 +994,44 @@ async function load() {
     status.textContent = `${error.message} 時間をおいて再読み込みしてください。`;
   }
 }
+
+document.querySelector("#law-search").addEventListener("submit", async event => {
+  event.preventDefault();
+  const query = document.querySelector("#search-query").value.trim();
+  if (!query) return;
+  const searchStatus = document.querySelector("#search-status");
+  const results = document.querySelector("#search-results");
+  const params = new URLSearchParams({ law_title: query, limit: "100", offset: "0", response_format: "json" });
+  results.replaceChildren();
+  searchStatus.textContent = "検索しています…";
+  try {
+    const response = await fetch(`${SEARCH_API}?${params}`);
+    if (!response.ok) throw new Error(`検索に失敗しました（${response.status}）。`);
+    const data = await response.json();
+    const laws = data?.laws || [];
+    if (!laws.length) {
+      searchStatus.textContent = "該当する法令はありません。";
+      return;
+    }
+    searchStatus.textContent = `${data.total_count ?? laws.length}件の法令が見つかりました。`;
+    for (const law of laws) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      const id = law.law_id || law.revision_info?.law_revision_id;
+      link.href = `?${new URLSearchParams({ law_id: id })}`;
+      link.textContent = law.revision_info?.law_title || law.law_title || law.law_num || id;
+      item.append(link);
+      const number = law.law_num || law.law_info?.law_num;
+      if (number) {
+        const detail = document.createElement("span");
+        detail.textContent = `（${number}）`;
+        item.append(detail);
+      }
+      results.append(item);
+    }
+  } catch (error) {
+    searchStatus.textContent = `${error.message} 時間をおいて再試行してください。`;
+  }
+});
 
 load();
