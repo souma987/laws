@@ -1,6 +1,7 @@
 const API = "https://laws.e-gov.go.jp/api/2/law_data/";
 const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
+const VIEW_HISTORY_KEY = "law-view-history";
 const params = new URLSearchParams(location.search);
 const lawId = params.get("id");
 const status = document.querySelector("#status");
@@ -67,6 +68,48 @@ content.addEventListener("click", event => {
   navigateToMarker(`#${target.id}`, target, "smooth");
 });
 let currentLawNumber = "";
+
+function readViewHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem(VIEW_HISTORY_KEY) || "[]");
+    return Array.isArray(history) ? history.filter(entry => entry && typeof entry.id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderViewHistory() {
+  const list = document.querySelector("#view-history-list");
+  if (!list) return;
+  list.replaceChildren();
+  for (const entry of readViewHistory().slice(0, 10)) {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = `?${new URLSearchParams({ id: entry.id })}`;
+    link.textContent = entry.title || entry.id;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "削除";
+    remove.setAttribute("aria-label", `${entry.title || entry.id}を閲覧履歴から削除`);
+    remove.addEventListener("click", () => {
+      try {
+        localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(readViewHistory().filter(item => item.id !== entry.id)));
+      } catch { /* Keep the current page usable when storage is unavailable. */ }
+      renderViewHistory();
+    });
+    item.append(link, remove);
+    list.append(item);
+  }
+  document.querySelector("#view-history").hidden = list.childElementCount === 0;
+}
+
+function rememberLaw(id, title) {
+  const history = readViewHistory().filter(entry => entry.id !== id);
+  history.unshift({ id, title });
+  try {
+    localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+  } catch { /* Browsing still works when storage is unavailable. */ }
+}
 
 function textOf(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
@@ -909,6 +952,7 @@ async function load() {
     document.querySelector("#title").textContent = "法令検索";
     status.hidden = true;
     document.querySelector("#search-page").hidden = false;
+    renderViewHistory();
     return;
   }
   const homeLink = document.querySelector("#home-link");
@@ -922,6 +966,7 @@ async function load() {
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
     currentLawNumber = data.law_info?.law_num || "";
     const plainTitle = typeof title === "string" ? title : textOf(title);
+    rememberLaw(data.law_info?.law_id || lawId, plainTitle);
     setPageMetadata(`${plainTitle} | 法令本文`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
@@ -1023,6 +1068,7 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
       return;
     }
     searchStatus.textContent = `${data.total_count ?? laws.length}件の法令が見つかりました。`;
+    document.querySelector("#view-history").hidden = true;
     for (const law of laws) {
       const item = document.createElement("li");
       const link = document.createElement("a");

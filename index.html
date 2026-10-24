@@ -89,6 +89,11 @@
     #popular-laws a { color: #0047ab; }
     #search-results { padding-left: 1.5rem; }
     #search-results li { margin: 1rem 0; }
+    #view-history { margin-top: 2rem; }
+    #view-history h2 { font-size: 1.25rem; }
+    #view-history-list { margin: 0; padding-left: 2rem; }
+    #view-history-list li { margin: 0.75rem 0; }
+    #view-history-list button { float: right; margin-left: 0.75rem; }
     #content { margin-top: 2rem; }
     #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }
     #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division { scroll-margin-top: calc(0.5rem + var(--sticky-major-height, 3rem) + var(--sticky-chapter-height, 2.5rem)); }
@@ -195,6 +200,10 @@
           </nav>
           <p id="search-status" role="status" aria-live="polite"></p>
           <ol id="search-results"></ol>
+          <section id="view-history" aria-labelledby="view-history-heading">
+            <h2 id="view-history-heading">最近見た法令</h2>
+            <ol id="view-history-list"></ol>
+          </section>
         </section>
         <article id="content" hidden></article>
         <footer>
