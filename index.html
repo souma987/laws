@@ -44,13 +44,14 @@
     #amendment-list .revision-status { display: inline; }
     #amendment-list li.current-amendment time, #amendment-list li.enforced-amendment time,
     #amendment-list .revision-status { font-weight: 700; }
+    #amendment-list li.enforced-amendment time, #amendment-list li.enforced-amendment .revision-status { text-decoration: underline; }
     #amendment-list a, #amendment-list span { overflow-wrap: anywhere; }
     #toc-list { list-style: none; margin: 0; padding: 0; }
     #toc-list li { margin: 0.45rem 0; line-height: 1.45; }
     #toc-list .toc-part.toc-top-level:not(:first-child) { position: relative; margin-top: 2.9rem; }
     #toc-list .toc-part.toc-top-level:not(:first-child)::before { position: absolute; top: -1.45rem; right: 0; left: 0; border-top: 1px solid #aeb7bd; content: ""; }
     #toc-list .toc-supplementary-entries { list-style: none; margin: 0; padding: 0; }
-    #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) 8.5em; align-items: baseline; column-gap: 0.5rem; color: inherit; text-decoration: none; }
+    #toc-list .toc-link { display: grid; width: 100%; grid-template-columns: var(--toc-number-width, 4em) minmax(0, 1fr) max-content; align-items: baseline; column-gap: 0.75rem; color: inherit; text-decoration: none; }
     #toc-list .toc-part .toc-link[aria-current="location"],
     #toc-list .toc-chapter .toc-link[aria-current="location"],
     #toc-list .toc-detail .toc-link[aria-current="location"] { color: #0047ab; }

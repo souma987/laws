@@ -543,9 +543,8 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       if (isCurrent) {
         item.classList.add("current-amendment");
         item.setAttribute("aria-current", "true");
-      } else if (isEnforced) {
-        item.classList.add("enforced-amendment");
       }
+      if (isEnforced) item.classList.add("enforced-amendment");
       const date = revision.amendment_enforcement_date || revision.amendment_scheduled_enforcement_date || revision.amendment_promulgate_date;
       if (date) {
         const time = document.createElement("time");
