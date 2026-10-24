@@ -1,7 +1,7 @@
 const API = "https://laws.e-gov.go.jp/api/2/law_data/";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const params = new URLSearchParams(location.search);
-const lawKey = params.get("law_id") || params.get("law_num") || params.get("law_revision_id") || params.get("id");
+const lawId = params.get("law_id");
 const status = document.querySelector("#status");
 const content = document.querySelector("#content");
 const previousMarkerButton = document.querySelector("#previous-marker");
@@ -184,8 +184,8 @@ function formatSupplementaryLawNumber(value) {
     ? [...number].map(character => ({ 〇: "0", 零: "0", 一: "1", 二: "2", 三: "3", 四: "4", 五: "5", 六: "6", 七: "7", 八: "8", 九: "9" })[character]).join("")
     : kanjiArticleTitleToArabic(number);
   return String(value).replace(
-    /^(明治|大正|昭和|平成|令和)([^年]+)年.*?法律第([^号]+)号$/,
-    (_, era, year, number) => `${era}${toArabic(year)}年法律第${toArabic(number)}号`
+    /^(明治|大正|昭和|平成|令和)([^年]+)年(?:(.+?月.+?日))?(法律|政令|勅令|府令|省令|規則|条例)第([^号]+)号$/,
+    (_, era, year, _date, kind, number) => `${era}${toArabic(year)}年${kind}第${toArabic(number)}号`
   );
 }
 
@@ -643,7 +643,7 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
       const title = document.createElement(isCurrent ? "span" : "a");
       title.className = "amendment-title";
       title.textContent = revision.amendment_law_title || "改正法令名なし";
-      if (!isCurrent) title.href = `?${new URLSearchParams({ law_revision_id: revision.law_revision_id })}`;
+      if (!isCurrent) title.href = `?${new URLSearchParams({ law_id: revision.law_revision_id })}`;
       item.append(title);
       list.append(item);
     });
@@ -905,12 +905,12 @@ window.addEventListener("resize", updateStickyHeadingHeight);
 window.addEventListener("resize", updateActiveTocItem);
 
 async function load() {
-  if (!lawKey) {
+  if (!lawId) {
     status.textContent = "URLに法令IDを指定してください。例：?law_id=411AC0000000127";
     return;
   }
   try {
-    const response = await fetch(API + encodeURIComponent(lawKey) + "?" + new URLSearchParams({ response_format: "json", law_full_text_format: "json", json_format: "full" }));
+    const response = await fetch(API + encodeURIComponent(lawId) + "?" + new URLSearchParams({ response_format: "json", law_full_text_format: "json", json_format: "full" }));
     if (!response.ok) throw new Error(`法令APIから本文を取得できませんでした（${response.status}）。`);
     const data = await response.json();
     if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
