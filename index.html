@@ -208,17 +208,12 @@
     #content .subitem2 { margin-left: 3em; }
     #content .subitem3, #content .subitem4 { margin-left: 4.5em; }
     #mobile-bar { display: none; }footer { margin-top: 3rem; }
-    @media (max-width: 115rem) {
+    @media (max-width: 120rem) {
       #layout.has-toc:not(.has-metadata) { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); }
       #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
       #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) minmax(0, 14rem); }
     }
-    @media (48rem < width <= 75rem) {
-      #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
-      #layout.has-toc.has-metadata #left-rail { grid-column: 1 / -1; position: static; max-height: none; }
-      #layout.has-toc.has-metadata #toc-panel { max-height: 18rem; }
-    }
-    @media (max-width: 48rem) {
+    @media (max-width: 60rem) {
       main { width: calc(100% - 2rem); margin: 0 auto; }
       body:has(#mobile-bar:not([hidden])) { padding-bottom: var(--mobile-bar-height, 6rem); }
       #layout { display: block; }
