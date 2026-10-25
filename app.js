@@ -201,15 +201,6 @@ const articleJumpInput = document.querySelector("#article-jump-input");
 const keyboardToggle = document.querySelector("#keyboard-toggle");
 const searchHitNavs = [...document.querySelectorAll(".search-hit-nav")];
 
-function placeArticleJumpPanel() {
-  if (mobileQuery.matches) {
-    mobileBar.prepend(articleJumpPanel);
-  } else {
-    document.querySelector("#left-rail").prepend(articleJumpPanel);
-    setSheet();
-  }
-}
-
 // Numeric keyboard only when explicitly requested; tapping the input itself gives the text keyboard.
 keyboardToggle.addEventListener("click", () => {
   if (articleJumpInput.value.trim()) {
@@ -1507,25 +1498,28 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
   }
 }
 
+let threshold = -1;
 function updateActiveTocItem() {
   const links = [...document.querySelectorAll("#toc-list .toc-link")];
-  const h3Sample = document.querySelector("h3");
-  let threshold = 62; // Fallback threshold in px
+  
+  if (threshold === -1) {
+    const h3Sample = document.querySelector("h3");
 
-  // Calculate dynamic threshold from sticky h3 metrics
-  if (h3Sample) {
-    const style = getComputedStyle(h3Sample);
-    const topOffset = parseFloat(style.top) || 0; // should be 0.5rem
-    const h3Height = h3Sample.getBoundingClientRect().height;
-    const bottomMargin = topOffset; // should be 0.5rem to match #content section.law-article margin
+    // Calculate dynamic threshold from sticky h3 metrics
+    if (h3Sample) {
+      const style = getComputedStyle(h3Sample);
+      const topOffset = parseFloat(style.top) || 0; // should be 0.5rem
+      const h3Height = h3Sample.getBoundingClientRect().height;
+      const bottomMargin = topOffset; // should be 0.5rem to match #content section.law-article margin
 
-    threshold = topOffset + h3Height + bottomMargin;
+      threshold = topOffset + h3Height + bottomMargin;
 
-    // Update CSS scroll-margin-top variable dynamically
-    document.documentElement.style.setProperty(
-      "--scroll-margin-offset",
-      `${threshold}px`
-    );
+      // Update CSS scroll-margin-top variable dynamically
+      document.documentElement.style.setProperty(
+        "--scroll-margin-offset",
+        `${threshold}px`
+      );
+    }
   }
 
   if (!links.length) return;
@@ -1570,7 +1564,14 @@ function updateActiveTocItem() {
 // Initial calculation on load
 window.addEventListener("DOMContentLoaded", updateActiveTocItem);
 window.addEventListener("scroll", updateActiveTocItem, { passive: true });
-window.addEventListener("resize", updateActiveTocItem);
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    threshold = -1;
+    updateActiveTocItem();
+  }, 250);
+});
 
 function makeTablesScrollable(root) {
   // Type 1: real tables (<table class="law-table">)
