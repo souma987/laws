@@ -1206,6 +1206,14 @@ async function loadAmendmentHistory(lawId, currentRevisionId, requestedAsLawId =
   }
 }
 
+function hasVisibleContent(element) {
+  if (element.firstElementChild) return true;
+  for (const node of element.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE && node.data.trim()) return true;
+  }
+  return false;
+}
+
 function appendNode(node, parent, depth = 0, structurePath = []) {
   if (depth > 60 || node == null) return;
   if (Array.isArray(node)) { node.forEach(item => appendNode(item, parent, depth + 1, structurePath)); return; }
@@ -1479,7 +1487,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
       : children, element, depth, nodePath);
   }
 
-  if (element.textContent.trim() || element.children.length) {
+  if (hasVisibleContent(element)) {
     const previous = parent.lastElementChild;
     let previousContent = previous;
     while (previousContent && !previousContent.classList.contains("law-article") && previousContent.lastElementChild) {
