@@ -680,7 +680,11 @@ function appendSentenceLines(nodes, parent, depth, structurePath, onCreateLine) 
       sentenceText.className = "sentence-text";
       line.append(sentenceText);
     }
-    if (sentenceCount) sentenceText.append(document.createElement("br"));
+    if (sentenceCount) {
+      const gap = document.createElement("span");
+      gap.className = "sentence-gap";
+      sentenceText.append(gap);
+    }
     appendInline(node, sentenceText, true);
     sentenceCount += 1;
   });
@@ -928,12 +932,17 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         listState.list = null;
         listState.tag = null;
         appendSentenceLines(child.children, paragraph, depth + 1, nodePath, line => {
-          if (numberAdded || !hasNumber) return;
-          line.classList.add("has-number");
-          const number = document.createElement("span");
-          number.className = "paragraph-number";
-          number.textContent = node.attr?.Num || textOf(paragraphNum.children).trim();
-          line.append(number);
+          if (numberAdded) return;
+          if (hasNumber) {
+            const number = document.createElement("span");
+            number.className = "paragraph-number";
+            number.textContent = node.attr?.Num || textOf(paragraphNum.children).trim();
+            line.append(number);
+          } else {
+            const indent = document.createElement("span");
+            indent.className = "paragraph-indent";
+            line.append(indent);
+          }
           numberAdded = true;
         });
       } else appendListAware(child, paragraph, listState, depth + 1, nodePath);
@@ -1152,7 +1161,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         const number = Number(paragraph.dataset.paragraphNumber);
         const line = paragraph.querySelector(".law-sentence");
         if (!line || !Number.isInteger(number) || number < 1) return;
-        line.classList.add("has-number");
+        line.querySelector(".paragraph-indent")?.remove();
         const marker = document.createElement("span");
         marker.className = "paragraph-number";
         marker.textContent = number <= 20 ? String.fromCodePoint(0x2460 + number - 1) : `(${number})`;
