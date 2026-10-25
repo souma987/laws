@@ -95,7 +95,7 @@
     #view-history-list li { margin: 0.75rem 0; }
     #content { margin-top: 2rem; }
     #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }  /* in sync with sticky top */
-    #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division, #content .law-article { scroll-margin-top: calc(4.0rem + 2px); }  /* see updateActiveTocItem() */
+    #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division, #content .law-article { scroll-margin-top: var(--scroll-margin-offset, 60px); }  /* see updateActiveTocItem() */
     #content .law-parenthetical { color: #667085; }
     #content .law-quotation, #content .law-quotation .law-parenthetical { color: #000; }
     #content section { margin: 1.5rem 0; }

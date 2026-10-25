@@ -1169,28 +1169,49 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
 
 function updateActiveTocItem() {
   const links = [...document.querySelectorAll("#toc-list .toc-link")];
-  const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  // Reading line for all TOC targets: just below the sticky h3.
-  // h3 top + paddingTop + fontSize*linHeight + paddingBottom + borderBottom + buffer
-  // (0.5 + 0.45 + 1.5*1.4 + 0.45) * rem + 2 + 12;
-  const threshold = 3.5*rem + 14;
+  const h3Sample = document.querySelector("h3");
+  let threshold = 62; // Fallback threshold in px
+
+  // Calculate dynamic threshold from sticky h3 metrics
+  if (h3Sample) {
+    const style = getComputedStyle(h3Sample);
+    const topOffset = parseFloat(style.top) || 0; // should be 0.5rem
+    const h3Height = h3Sample.getBoundingClientRect().height;
+    const bottomMargin = topOffset; // should be 0.5rem to match #content section.law-article margin
+
+    threshold = topOffset + h3Height + bottomMargin;
+
+    // Update CSS scroll-margin-top variable dynamically
+    document.documentElement.style.setProperty(
+      "--scroll-margin-offset",
+      `${threshold}px`
+    );
+  }
+
   if (!links.length) return;
+
   let active = null;
   for (const link of links) {
     const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
-    if (target && target.getBoundingClientRect().top <= threshold) active = link;
+    if (target && target.getBoundingClientRect().top <= threshold + 2) active = link;
     else if (target) break;
   }
+
   links.forEach(link => {
     if (link === active) link.setAttribute("aria-current", "location");
     else link.removeAttribute("aria-current");
   });
+
   if (active) {
     const number = active.querySelector(".toc-number");
     const heading = active.querySelector(".toc-heading");
     const linkRect = active.getBoundingClientRect();
     const numberRect = number?.getBoundingClientRect();
-    active.style.setProperty("--toc-active-line-left", `${numberRect ? numberRect.left - linkRect.left : 0}px`);
+    active.style.setProperty(
+      "--toc-active-line-left", 
+      `${numberRect ? numberRect.left - linkRect.left : 0}px`
+    );
+
     const supplementaryEntry = active.closest(".toc-supplementary-provision");
     let headingRight = null;
     if (supplementaryEntry && heading) {
@@ -1199,10 +1220,15 @@ function updateActiveTocItem() {
       const textRects = [...range.getClientRects()];
       if (textRects.length) headingRight = Math.max(...textRects.map(rect => rect.right));
     }
-    active.style.setProperty("--toc-active-line-right", `${headingRight === null ? 0 : linkRect.right - headingRight}px`);
+    active.style.setProperty(
+      "--toc-active-line-right", 
+      `${headingRight === null ? 0 : linkRect.right - headingRight}px`
+    );
   }
 }
 
+// Initial calculation on load
+window.addEventListener("DOMContentLoaded", updateActiveTocItem);
 window.addEventListener("scroll", updateActiveTocItem, { passive: true });
 window.addEventListener("resize", updateActiveTocItem);
 
@@ -1308,8 +1334,8 @@ async function load() {
     content.hidden = false;
     const target = decodeURIComponent(location.hash.slice(1));
     requestAnimationFrame(() => {
-      if (target) document.getElementById(target)?.scrollIntoView();
       updateActiveTocItem();
+      if (target) document.getElementById(target)?.scrollIntoView();
     });
   } catch (error) {
     status.classList.add("error");
