@@ -45,12 +45,17 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  if (!CACHE_URLS.has(event.request.url)) return;
+
+  const requestUrl = new URL(event.request.url);
+  requestUrl.search = '';
+  const cleanUrl = requestUrl.href;
+
+  if (!CACHE_URLS.has(cleanUrl)) return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(cleanUrl).then((cachedResponse) => {
       if (cachedResponse) {
-        console.log("Cache hit:", event.request.url)
+        console.log("Cache hit:", cleanUrl);
         return cachedResponse;
       }
       return fetch(event.request).then((response) => {
@@ -59,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         }
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
+          cache.put(cleanUrl, responseToCache);
         });
         return response;
       });
