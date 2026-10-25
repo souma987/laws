@@ -749,10 +749,6 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   }
 });
 
-articleJumpInput.addEventListener("input", () => {
-  if (!articleJumpInput.value.trim()) clearArticleSearch();
-});
-
 articleJumpInput.addEventListener("keydown", event => {
   if (event.key !== "Enter" || !event.shiftKey || event.isComposing) return;
   if (!articleSearch.query || articleSearch.query !== articleJumpInput.value.trim()) return;
