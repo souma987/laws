@@ -17,6 +17,10 @@ const ASSETS_TO_CACHE = [
   `${BASE_PATH}/icons/web-app-manifest-512x512.png`
 ];
 
+const CACHE_URLS = new Set(
+  ASSETS_TO_CACHE.map((path) => new URL(path, self.location.href).href)
+);
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -41,6 +45,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (!CACHE_URLS.has(event.request.url)) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
