@@ -1169,10 +1169,11 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
 
 function updateActiveTocItem() {
   const links = [...document.querySelectorAll("#toc-list .toc-link")];
-  // Reading line for all TOC targets: just below the sticky h3.
-  // Keep in sync with `scroll-margin-top: 4.5rem` in the CSS.
   const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  const threshold = 12 + 4.5 * rem;
+  // Reading line for all TOC targets: just below the sticky h3.
+  // h3 top + paddingTop + fontSize*linHeight + paddingBottom + borderBottom + buffer
+  // (0.5 + 0.45 + 1.5*1.4 + 0.45) * rem + 2 + 12;
+  const threshold = 3.5*rem + 14;
   if (!links.length) return;
   let active = null;
   for (const link of links) {

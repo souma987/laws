@@ -94,8 +94,8 @@
     #view-history-list { margin: 0; padding-left: 2rem; }
     #view-history-list li { margin: 0.75rem 0; }
     #content { margin-top: 2rem; }
-    #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }
-    #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division, #content .law-article { scroll-margin-top: 4.5rem; }
+    #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }  /* in sync with sticky top */
+    #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division, #content .law-article { scroll-margin-top: calc(4.0rem + 2px); }  /* see updateActiveTocItem() */
     #content .law-parenthetical { color: #667085; }
     #content .law-quotation, #content .law-quotation .law-parenthetical { color: #000; }
     #content section { margin: 1.5rem 0; }
@@ -108,7 +108,7 @@
     #content .law-supplementary-law-number { text-align: right; font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
     #content hr.article-separator { margin: 1rem 0; border: 0; border-top: 1px solid #d8dcdf; }
     #content h2 { font-size: 1.75rem; }
-    #content h3 { font-size: 1.5rem; }
+    #content h3 { font-size: 1.5rem; line-height: 1.4 }
     #content h4 { font-size: 1.3rem; }
     #content h5 { font-size: 1.15rem; }
     #content h6 { font-size: 1.05rem; }
