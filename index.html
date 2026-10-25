@@ -3,16 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
-  <meta name="description" content="日本の法令本文を検索・閲覧できます。法令名や法令番号から探し、条文と改正履歴を確認できます。">
+  <meta name="description" content="日本の法令を検索・閲覧できます。法令名や法令番号から探し、条文と改正履歴を確認できます。">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#a5222f">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
-  <meta property="og:site_name" content="法令本文">
-  <meta property="og:title" content="法令検索 | 法令本文">
-  <meta property="og:description" content="日本の法令本文を検索・閲覧できます。法令名や法令番号から探し、条文と改正履歴を確認できます。">
+  <meta property="og:site_name" content="いつでも法令閲覧">
+  <meta property="og:title" content="法令検索 | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト">
+  <meta property="og:description" content="日本の法令を検索・閲覧できます。パソコンやスマホから、条文と改正履歴を確認できます。">
   <meta name="twitter:card" content="summary">
-  <title>法令検索 | 法令本文</title>
+  <link rel="icon" type="image/png" href="icons/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg" />
+  <link rel="shortcut icon" href="icons/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" /><title>法令検索 | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "いつでも法令閲覧",
+    "url": "https://souma987.github.io/laws/" 
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://souma987.github.io/laws/?search={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((registration) => {
+        console.log('ServiceWorker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('ServiceWorker registration failed:', error);
+      });
+    });
+  }
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; }

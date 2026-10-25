@@ -1576,16 +1576,24 @@ async function load() {
     document.querySelector('meta[name="description"]').content = description;
     document.querySelector('meta[property="og:title"]').content = title;
     document.querySelector('meta[property="og:description"]').content = description;
+    const currentUrl = `${location.origin}${location.pathname}${location.search}`;
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement("link");
       canonical.rel = "canonical";
       document.head.append(canonical);
     }
-    canonical.href = `${location.origin}${location.pathname}${location.search}`;
+    canonical.href = currentUrl;
+    let ogUrl = document.querySelector('meta[property="og:url"]');
+    if (!ogUrl) {
+      ogUrl = document.createElement("meta");
+      ogUrl.setAttribute("property", "og:url");
+      document.head.append(ogUrl);
+    }
+    ogUrl.content = currentUrl;
   };
   if (!lawId) {
-    setPageMetadata("法令検索 | 法令本文", "法令名や法令番号から日本の法令を検索し、条文と改正履歴を確認できます。");
+    setPageMetadata("法令検索 | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト", "法令名や法令番号から日本の法令を検索し、条文と改正履歴を確認できます。");
     document.querySelector("#title").textContent = "法令検索";
     status.hidden = true;
     document.querySelector("#search-page").hidden = false;
@@ -1599,14 +1607,14 @@ async function load() {
   mobileBar.hidden = false;
   try {
     const data = await fetchLawData(lawId);
-    if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
-    const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
+    if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令が見つかりませんでした。法令IDや法令番号を確認してください。");
+    const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令条文";
     currentLawNumber = data.law_info?.law_num || "";
     const plainTitle = typeof title === "string" ? title : textOf(title);
     const revisionId = data.revision_info?.law_revision_id || lawId;
     const historyTitle = formatRevisionTitle(plainTitle, data.revision_info);
     rememberLaw(revisionId, historyTitle);
-    setPageMetadata(`${plainTitle} | 法令本文`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
+    setPageMetadata(`${plainTitle} | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
     const requestedAsLawId = !lawId.includes("_");
