@@ -62,7 +62,7 @@
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
     #article-jump { margin: 0; }
     #article-jump-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
-    #article-jump-panel #home-link { display: inline-block; color: #0047ab; }
+    #article-jump-panel #home-link { display: inline-block; }
     #article-jump-panel #home-link[hidden] { display: none; }
     #article-jump-controls > button { flex: 0 0 auto; white-space: nowrap; }
     .search-hit-nav { display: flex; align-items: center; gap: 0.5rem; }
@@ -110,9 +110,9 @@
     #toc-list .toc-part .toc-link, #toc-list .toc-chapter .toc-link { color: inherit; font-weight: 700; }
     #toc-list .toc-chapter.toc-chapter-leaf .toc-link { font-weight: 400; }
     #toc-list .toc-detail .toc-link { font-weight: 400; }
-    #toc-list .toc-link[aria-current="location"] { color: #0047ab; }
+    #toc-list .toc-link[aria-current="location"] { color: #a5222f; }
     #toc-list .toc-link[aria-current="location"] { position: relative; }
-    #toc-list .toc-link[aria-current="location"]::after { position: absolute; right: var(--toc-active-line-right, 0); bottom: 0; left: var(--toc-active-line-left, 0); display: block; height: 0; border-bottom: 1px solid #0047ab; content: ""; pointer-events: none; }
+    #toc-list .toc-link[aria-current="location"]::after { position: absolute; right: var(--toc-active-line-right, 0); bottom: 0; left: var(--toc-active-line-left, 0); display: block; height: 0; border-bottom: 1px solid #a5222f; content: ""; pointer-events: none; }
     #toc-list .toc-number { grid-column: 1; justify-self: end; white-space: nowrap; }
     #toc-list .toc-supplementary-heading > .toc-link > .toc-number { justify-self: end; }
     #toc-list .toc-heading { grid-column: 2; min-width: 0; }
@@ -125,7 +125,6 @@
     #search-page label { grid-column: 1 / -1; font-weight: 700; }
     #search-query { flex: 1; min-width: 0; padding: 0.75rem; font: inherit; }
     #popular-laws { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; }
-    #popular-laws a { color: #0047ab; }
     #search-results { padding-left: 1.5rem; }
     #search-results li { margin: 1rem 0; }
     #view-history { margin: 2rem 0; }
@@ -144,7 +143,7 @@
     #content section.law-article { margin: 0.5rem 0; }
     #content h2, #content h3, #content h4, #content h5, #content h6 { margin: 1.5rem 0 0.75rem; }
     #content p { margin: 0.75rem 0; line-height: 1.8; }
-    #content .article-heading { margin: 0.25rem 0; color: #0047ab; }
+    #content .article-heading { margin: 0.25rem 0; color: #a5222f; }
     #content .article-heading strong[data-article-number] { color: #202a31; }
     #content .law-supplementary-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding-bottom: 0.45rem; border-bottom: 1px solid #aeb7bd; font-size: 1.25rem; font-weight: 700; }
     #content .law-supplementary-law-number { text-align: right; font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
@@ -224,7 +223,7 @@
       #mobile-bar > .search-hit-nav .search-hit-count { margin-right: auto; }
       #mobile-bar #article-jump-input { font-size: 16px; } /* prevents iOS zoom on focus */
       #mobile-bar-nav { display: flex; align-items: center; gap: 0.5rem; }
-      #mobile-home-link { margin-right: auto; color: #0047ab; }
+      #mobile-home-link { margin-right: auto; }
       body:not(:has(#layout.has-toc)) #mobile-bar [data-sheet-target="toc"],
       body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="metadata"],
       body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="amendment"] { display: none; }
@@ -262,7 +261,7 @@
       <div id="left-rail" hidden>
         <aside id="article-jump-panel" aria-label="条文へ移動・語句検索">
         <div id="article-jump-header">
-          <a id="home-link" href="/" hidden>検索ページに戻る</a>
+          <a id="home-link" href="/" hidden>法令検索に戻る</a>
           <div class="search-hit-nav" role="group" aria-label="検索結果の移動" hidden>
             <span class="search-hit-count" aria-live="polite"></span>
             <button type="button" data-search-step="-1" aria-label="前の検索結果へ">前へ</button>
