@@ -212,15 +212,26 @@ function placeArticleJumpPanel() {
 
 // Numeric keyboard only when explicitly requested; tapping the input itself gives the text keyboard.
 keyboardToggle.addEventListener("click", () => {
+  if (articleJumpInput.value.trim()) {
+    articleJumpInput.form.requestSubmit();
+    return;
+  }
   articleJumpInput.blur();
   articleJumpInput.inputMode = "decimal";
   articleJumpInput.focus();
-  articleJumpInput.select();
 });
 
 articleJumpInput.addEventListener("blur", () => {
   articleJumpInput.inputMode = "text";
 });
+
+document.addEventListener("input", event => {
+  if (event.target !== articleJumpInput) return;
+  const value = articleJumpInput.value.trim();
+  keyboardToggle.textContent = !value ? "番号" : parseArticleNumber(value) ? "移動" : "検索";
+  if (!value) clearArticleSearch();
+});
+
 function setSheet(name = "") {
   if (name) document.body.dataset.sheet = name;
   else delete document.body.dataset.sheet;
@@ -710,6 +721,8 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   const articles = mainArticles.length ? mainArticles : [...content.querySelectorAll(".law-article")];
   const article = number ? nearestArticle(number, articles) : null;
   if (article) {
+    articleJumpInput.value = "";
+    articleJumpInput.dispatchEvent(new Event("input", { bubbles: true }));
     clearArticleSearch();
     navigateToMarker(`#${article.id}`, article);
   } else {
@@ -736,7 +749,7 @@ searchHitNavs.forEach(nav => nav.addEventListener("click", event => {
   }
   if (event.target.closest("[data-search-close]")) {
     articleJumpInput.value = "";
-    clearArticleSearch();
+    articleJumpInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
 }));
 

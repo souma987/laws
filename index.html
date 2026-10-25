@@ -224,6 +224,7 @@
       #content .law-table-scroll-inner,
       #content .law-columns-scroll-inner { width: max-content; min-width: 100%; max-width: 175%; transform: scaleY(-1); }
       #content .law-table-scroll-inner > .law-table-two-column { table-layout: auto; }
+      #mobile-bar #article-jump-controls > button[type="submit"] { display: none; }
     }
   </style>
 </head>
@@ -243,10 +244,10 @@
         </div>
           <form id="article-jump">
             <div id="article-jump-controls">
-              <button id="previous-marker" type="button" aria-label="直前のURLマーカーへ戻る" disabled>◀</button>
-              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動、または語句を検索（スラッシュキーでフォーカス）" placeholder="番号・語句（例：424-2）" autocomplete="off">
-              <button id="keyboard-toggle" type="button" aria-controls="article-jump-input" aria-label="条文番号を入力（数字キーボード）">番号</button>
-              <button id="next-marker" type="button" aria-label="次のURLマーカーへ進む" disabled>▶</button>
+              <button id="previous-marker" type="button" aria-label="直前のURLマーカーへ戻る" disabled>戻</button>
+              <button id="next-marker" type="button" aria-label="次のURLマーカーへ進む" disabled>進</button>
+              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動、または語句を検索（スラッシュキーでフォーカス）" placeholder="番号・語句（例：424-2、時効）" autocomplete="off">
+              <button id="keyboard-toggle" type="button" aria-controls="article-jump-input">番号</button>
               <button type="submit">検索</button>
             </div>
           </form>
