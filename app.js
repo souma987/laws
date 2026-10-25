@@ -1254,6 +1254,32 @@ window.addEventListener("DOMContentLoaded", updateActiveTocItem);
 window.addEventListener("scroll", updateActiveTocItem, { passive: true });
 window.addEventListener("resize", updateActiveTocItem);
 
+function makeTablesScrollable(root) {
+  // Type 1: real tables (<table class="law-table">)
+  root.querySelectorAll("table.law-table").forEach(table => {
+    if (table.parentElement.closest(".law-table, .law-table-scroll-inner")) return;
+    const scroller = document.createElement("div");
+    scroller.className = "law-table-scroll";
+    const inner = document.createElement("div");
+    inner.className = "law-table-scroll-inner";
+    table.before(scroller);
+    inner.append(table);
+    scroller.append(inner);
+  });
+
+  // Type 2: column-style lists (.law-list > .law-item > .law-item-columns)
+  // Wrap the whole list so every row scrolls together and the columns stay lined up.
+  root.querySelectorAll(".law-list").forEach(list => {
+    if (!list.querySelector(":scope > .law-item > .law-item-columns")) return;
+    if (list.closest(".law-table, .law-columns-scroll-inner")) return;
+    const inner = document.createElement("div");
+    inner.className = "law-columns-scroll-inner";
+    inner.append(...list.childNodes);
+    list.append(inner);
+    list.classList.add("law-columns-scroll");
+  });
+}
+
 async function load() {
   const setPageMetadata = (title, description) => {
     document.title = title;
@@ -1349,6 +1375,7 @@ async function load() {
       }
     }
     appendNode(data.law_full_text, content);
+    makeTablesScrollable(content);
     content.querySelectorAll(".law-supplementary-provision").forEach((provision, index) => {
       provision.id = `sp${index + 1}`;
     });

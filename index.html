@@ -146,6 +146,9 @@
     #content .law-table td.law-table-subitem-first { border-top: 1px solid #aeb7bd; }
     #content .law-table td.law-table-subitem-last { border-bottom: 1px solid #aeb7bd; }
     #content .law-table-subitem-list { margin: 0.35rem 0 0.35rem 0.75em; padding: 0.35rem 0.6rem; border: 1px solid #aeb7bd; }
+    #content .law-table-scroll { margin: 0.75rem 0; }
+    #content .law-table-frame .law-table-scroll { margin: 0; }
+    #content .law-table-scroll .law-table { margin: 0; }
     #content .law-item { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: start; gap: 0 0.5rem; margin: 0.25rem 0; }
     #content .law-item:has(> .law-item-columns) { display: block; }
     #content .law-item:has(> .law-item-columns) > .law-list { width: 50%; margin-left: 50%; }
@@ -186,6 +189,11 @@
       #content h5 { font-size: 1.05rem; }
       #content h6 { font-size: 1rem; }
       #content .law-supplementary-heading { font-size: 1.1rem; }
+      #content .law-table-scroll,
+      #content .law-columns-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; transform: scaleY(-1); }
+      #content .law-table-scroll-inner,
+      #content .law-columns-scroll-inner { width: max-content; min-width: 100%; max-width: 175%; transform: scaleY(-1); }
+      #content .law-table-scroll-inner > .law-table-two-column { table-layout: auto; }
     }
   </style>
 </head>
