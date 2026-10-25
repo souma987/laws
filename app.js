@@ -1519,10 +1519,7 @@ function updateActiveTocItem() {
       threshold = topOffset + h3Height + bottomMargin;
 
       // Update CSS scroll-margin-top variable dynamically
-      document.documentElement.style.setProperty(
-        "--scroll-margin-offset",
-        `${threshold}px`
-      );
+      content.style.setProperty("--scroll-margin-offset", `${threshold}px`);
     }
   }
 
