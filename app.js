@@ -1,6 +1,147 @@
 const API = "https://laws.e-gov.go.jp/api/2/law_data/";
 const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
+const CACHE_NAME = "law-text-cache-v1";
+const LAW_REVISION_INDEX_KEY = "law-latest-revision-index";
+const MAX_VIEW_HISTORY = 15;
+
+function readRevisionIndex() {
+  try {
+    const index = JSON.parse(localStorage.getItem(LAW_REVISION_INDEX_KEY) || "{}");
+    return index && typeof index === "object" ? index : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeRevisionIndex(index) {
+  try {
+    localStorage.setItem(LAW_REVISION_INDEX_KEY, JSON.stringify(index));
+  } catch { /* Storage might be unavailable or full */ }
+}
+
+function setIndexedLatestRevision(lawId, revisionId) {
+  if (!lawId || !revisionId) return;
+  const index = readRevisionIndex();
+  index[lawId] = revisionId;
+  writeRevisionIndex(index);
+}
+
+function lawDataUrl(targetId) {
+  return API + encodeURIComponent(targetId) + "?" + new URLSearchParams({
+    response_format: "json",
+    law_full_text_format: "json",
+    json_format: "full"
+  });
+}
+
+function getRevisionEnforcementDate(revisionInfo) {
+  return revisionInfo?.amendment_enforcement_date || "";
+}
+
+function getTodayString() {
+  const parts = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const part = type => parts.find(p => p.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function isEnforcedRevision(revisionInfo, today = getTodayString()) {
+  const date = getRevisionEnforcementDate(revisionInfo);
+  return Boolean(date && date <= today);
+}
+
+function findLatestRevision(revisions) {
+  const today = getTodayString();
+  const validRevisions = (revisions || []).filter(r => isEnforcedRevision(r, today));
+  if (!validRevisions.length) return revisions?.[0] || null;
+  return validRevisions.reduce((latest, current) => {
+    const latestDate = getRevisionEnforcementDate(latest);
+    const currentDate = getRevisionEnforcementDate(current);
+    if (!latestDate || currentDate > latestDate) return current;
+    if (currentDate === latestDate && (current.law_revision_id || "") > (latest.law_revision_id || "")) {
+      return current;
+    }
+    return latest;
+  }, validRevisions[0]);
+}
+
+async function findLatestCachedRevision(lawId) {
+  if (!("caches" in window)) return null;
+  const cache = await caches.open(CACHE_NAME);
+  const index = readRevisionIndex();
+  const indexedRevisionId = index[lawId];
+  if (!indexedRevisionId) return null;
+  const cachedResponse = await cache.match(lawDataUrl(indexedRevisionId));
+  if (!cachedResponse) return null;
+  try {
+    return await cachedResponse.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLawData(targetId) {
+  const cacheAvailable = "caches" in window;
+  const cache = cacheAvailable ? await caches.open(CACHE_NAME) : null;
+  const isRevision = targetId.includes("_");
+
+  if (cache) {
+    if (isRevision) {
+      const cachedResponse = await cache.match(lawDataUrl(targetId));
+      if (cachedResponse) {
+        console.log(`Cache hit: ${targetId}`);
+        return await cachedResponse.json();
+      }
+    } else {
+      const latestCached = await findLatestCachedRevision(targetId);
+      if (latestCached) {
+        console.log(`Cache hit: ${latestCached.revision_info?.law_revision_id || targetId}`);
+        return latestCached;
+      }
+    }
+  }
+
+  const response = await fetch(lawDataUrl(targetId));
+  if (!response.ok) throw new Error(`法令APIから本文を取得できませんでした（${response.status}）。`);
+  const data = await response.json();
+
+  if (cache && data && !data.error && data.law_full_text) {
+    const revisionId = data.revision_info?.law_revision_id || (isRevision ? targetId : null);
+    if (revisionId) {
+      await cache.put(lawDataUrl(revisionId), new Response(JSON.stringify(data), {
+        headers: { "Content-Type": "application/json" }
+      }));
+    }
+  }
+
+  return data;
+}
+
+async function trimUnusedCache() {
+  if (!("caches" in window)) return;
+  try {
+    const pinned = readPinnedLaws();
+    const history = readViewHistory();
+    const retainedIds = new Set([...pinned, ...history].map(entry => entry.id).filter(Boolean));
+    const cache = await caches.open(CACHE_NAME);
+    const requests = await cache.keys();
+    for (const req of requests) {
+      if (!req.url.startsWith(API)) continue;
+      const target = req.url.slice(API.length).split("?")[0];
+      const id = decodeURIComponent(target);
+      if (!retainedIds.has(id)) {
+        await cache.delete(req);
+      }
+    }
+  } catch { /* Ignore cache trimming errors */ }
+}
+
+
 const VIEW_HISTORY_KEY = "law-view-history";
 const PINNED_LAWS_KEY = "law-pinned-laws";
 const params = new URLSearchParams(location.search);
@@ -129,13 +270,14 @@ function renderViewHistory() {
   }
   pinnedSection.hidden = pinned.length === 0;
   list.replaceChildren();
-  for (const entry of readViewHistory().filter(entry => !pinnedIds.has(entry.id)).slice(0, 10)) {
+  for (const entry of readViewHistory().filter(entry => !pinnedIds.has(entry.id)).slice(0, MAX_VIEW_HISTORY)) {
     const item = document.createElement("li");
     item.append(makeLawLink(entry));
     const remove = makeDeleteButton(entry, () => {
       try {
         localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(readViewHistory().filter(item => item.id !== entry.id)));
       } catch { /* Keep the current page usable when storage is unavailable. */ }
+      trimUnusedCache();
       renderViewHistory();
     }, "閲覧履歴");
     const pin = document.createElement("button");
@@ -157,9 +299,13 @@ function renderViewHistory() {
 function rememberLaw(id, title) {
   const history = readViewHistory().filter(entry => entry.id !== id);
   history.unshift({ id, title });
+  const trimmedHistory = history.slice(0, MAX_VIEW_HISTORY);
   try {
-    localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+    localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(trimmedHistory));
   } catch { /* Browsing still works when storage is unavailable. */ }
+  if (history.length > MAX_VIEW_HISTORY) {
+    trimUnusedCache();
+  }
 }
 
 function formatRevisionTitle(title, revisionInfo = {}) {
@@ -696,7 +842,7 @@ document.querySelector("#right-nav").addEventListener("click", event => {
   });
 });
 
-async function loadAmendmentHistory(lawId, currentRevisionId) {
+async function loadAmendmentHistory(lawId, currentRevisionId, requestedAsLawId = false) {
   const panel = document.querySelector("#amendment-panel");
   const list = document.querySelector("#amendment-list");
   document.querySelector("#right-rail").hidden = false;
@@ -705,7 +851,23 @@ async function loadAmendmentHistory(lawId, currentRevisionId) {
     const response = await fetch(`${REVISION_API}${encodeURIComponent(lawId)}?response_format=json`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    (data.revisions || []).forEach(revision => {
+    const revisions = data.revisions || [];
+
+    // Find the latest revision in effect by picking the latest enforcement date (excluding future dates)
+    const latestInEffect = findLatestRevision(revisions);
+
+    if (latestInEffect?.law_revision_id) {
+      setIndexedLatestRevision(lawId, latestInEffect.law_revision_id);
+      if (requestedAsLawId && currentRevisionId && latestInEffect.law_revision_id !== currentRevisionId) {
+        setTimeout(() => {
+          if (confirm("施行状況の更新が見つかりました。再読み込みして最新版を表示しますか？")) {
+            location.reload();
+          }
+        }, 100);
+      }
+    }
+
+    revisions.forEach(revision => {
       const item = document.createElement("li");
       const isCurrent = revision.law_revision_id === currentRevisionId;
       const isEnforced = revision.current_revision_status === "CurrentEnforced";
@@ -1124,9 +1286,7 @@ async function load() {
   homeLink.href = location.pathname;
   homeLink.hidden = false;
   try {
-    const response = await fetch(API + encodeURIComponent(lawId) + "?" + new URLSearchParams({ response_format: "json", law_full_text_format: "json", json_format: "full" }));
-    if (!response.ok) throw new Error(`法令APIから本文を取得できませんでした（${response.status}）。`);
-    const data = await response.json();
+    const data = await fetchLawData(lawId);
     if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
     currentLawNumber = data.law_info?.law_num || "";
@@ -1137,7 +1297,8 @@ async function load() {
     setPageMetadata(`${plainTitle} | 法令本文`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
-    if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id);
+    const requestedAsLawId = !lawId.includes("_");
+    if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id, requestedAsLawId);
     const mainProvision = findTag(data.law_full_text, "MainProvision");
     const supplementaryProvisions = findTags(data.law_full_text, "SupplProvision");
     if (mainProvision || supplementaryProvisions.length) {
