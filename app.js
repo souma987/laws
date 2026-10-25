@@ -1188,45 +1188,13 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
   }
 }
 
-function updateStickyHeadingHeight() {
-  content.style.removeProperty("--sticky-major-height");
-  content.style.removeProperty("--sticky-chapter-height");
-  const partHeadings = [...content.querySelectorAll(".law-structure-part")]
-    .filter(part => part.querySelector(".law-structure-chapter"));
-  partHeadings.forEach(part => {
-    const partHeading = part.querySelector(":scope > h2");
-    part.querySelectorAll(".law-structure-chapter > h3").forEach(chapterHeading => {
-      if (chapterHeading.querySelector(".sticky-part-title")) return;
-      const partTitle = document.createElement("span");
-      partTitle.className = "sticky-part-title";
-      partTitle.textContent = partHeading.textContent;
-      chapterHeading.append(partTitle);
-    });
-  });
-  const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")]
-    .filter(heading => !heading.parentElement.matches(".law-structure-part:has(.law-structure-chapter)"))
-    .map(heading => heading.offsetHeight));
-  const chapterHeight = Math.max(0, ...[...content.querySelectorAll("h3")].map(heading => heading.offsetHeight));
-  content.style.setProperty("--sticky-major-height", `${majorHeight}px`);
-  content.style.setProperty("--sticky-chapter-height", `${chapterHeight}px`);
-}
-
-function updateStickyPartTitles() {
-  content.querySelectorAll(".law-structure-chapter > h3:has(.sticky-part-title)").forEach(heading => {
-    const part = heading.closest(".law-structure-part");
-    const headingRect = heading.getBoundingClientRect();
-    const partBottom = part?.getBoundingClientRect().bottom ?? 0;
-    const stickyTop = Number.parseFloat(getComputedStyle(heading).top) || 0;
-    const stuck = headingRect.top <= stickyTop + 1 && partBottom > stickyTop + heading.offsetHeight;
-    heading.classList.toggle("is-sticky", stuck);
-  });
-}
-
 function updateActiveTocItem() {
   const links = [...document.querySelectorAll("#toc-list .toc-link")];
+  // Reading line for all TOC targets: just below the sticky h3.
+  // Keep in sync with `scroll-margin-top: 4.5rem` in the CSS.
+  const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const threshold = 12 + 4.5 * rem;
   if (!links.length) return;
-  const threshold = 24 + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-major-height")) || 0)
-    + (Number.parseFloat(getComputedStyle(content).getPropertyValue("--sticky-chapter-height")) || 0);
   let active = null;
   for (const link of links) {
     const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
@@ -1255,9 +1223,7 @@ function updateActiveTocItem() {
   }
 }
 
-window.addEventListener("scroll", updateStickyPartTitles, { passive: true });
 window.addEventListener("scroll", updateActiveTocItem, { passive: true });
-window.addEventListener("resize", updateStickyHeadingHeight);
 window.addEventListener("resize", updateActiveTocItem);
 
 async function load() {
@@ -1362,8 +1328,6 @@ async function load() {
     content.hidden = false;
     const target = decodeURIComponent(location.hash.slice(1));
     requestAnimationFrame(() => {
-      updateStickyHeadingHeight();
-      updateStickyPartTitles();
       if (target) document.getElementById(target)?.scrollIntoView();
       updateActiveTocItem();
     });
