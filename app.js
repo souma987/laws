@@ -1033,7 +1033,7 @@ function updateStickyHeadingHeight() {
       const partTitle = document.createElement("span");
       partTitle.className = "sticky-part-title";
       partTitle.textContent = partHeading.textContent;
-      chapterHeading.prepend(partTitle);
+      chapterHeading.append(partTitle);
     });
   });
   const majorHeight = Math.max(0, ...[...content.querySelectorAll("h2")]
