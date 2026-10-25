@@ -317,6 +317,8 @@ function textOf(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(textOf).join("");
   if (!value || typeof value !== "object") return "";
+  // Skip reading annotations (Rt); keep base characters inside Ruby.
+  if (value.tag === "Rt") return "";
   if (value.tag) return (value.children || []).map(textOf).join("");
   return "";
 }
@@ -1065,6 +1067,9 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
   } else if (tag === "Sentence") {
     element.classList.add("law-sentence");
     appendInline(node, element, true);
+  } else if (level) {
+    // Structure headings: show base text only (no furigana).
+    element.textContent = textOf(children);
   }
 
   if (titleNode) {
@@ -1088,7 +1093,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
     if (titleNode) {
       const title = document.createElement("span");
       title.className = "law-supplementary-heading-title";
-      appendInline(titleNode, title);
+      title.textContent = textOf(titleNode.children);
       headingLabel.append(" ", title);
     }
     const lawNumber = node.attr?.AmendLawNum || currentLawNumber;
@@ -1146,7 +1151,7 @@ function appendNode(node, parent, depth = 0, structurePath = []) {
         line.prepend(marker);
       });
     }
-  } else if (!["Table", "TableHeaderRow", "TableRow", "TableHeaderColumn", "TableColumn", "Sentence"].includes(tag)) {
+  } else if (!level && !["Table", "TableHeaderRow", "TableRow", "TableHeaderColumn", "TableColumn", "Sentence"].includes(tag)) {
     appendChildren(tag === "SupplProvision"
       ? children.filter(child => !["SupplProvisionLabel", "SupplProvisionTitle"].includes(child?.tag))
       : children, element, depth, nodePath);
