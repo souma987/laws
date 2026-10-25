@@ -376,19 +376,24 @@ function renderViewHistory() {
   pinnedList.replaceChildren();
   for (const entry of pinned) {
     const item = document.createElement("li");
-    item.append(
+    const content = document.createElement("div");
+    content.className = "law-item-content";
+    content.append(
       makeLawLink(entry),
       makeLawListActions(makeDeleteButton(entry, () => {
         writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
         renderViewHistory();
       }, "固定一覧", "解除")),
     );
+    item.append(content);
     pinnedList.append(item);
   }
   pinnedSection.hidden = pinned.length === 0;
   list.replaceChildren();
   for (const entry of readViewHistory().filter(entry => !pinnedIds.has(entry.id)).slice(0, MAX_VIEW_HISTORY)) {
     const item = document.createElement("li");
+    const content = document.createElement("div");
+    content.className = "law-item-content";
     const remove = makeDeleteButton(entry, () => {
       try {
         localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(readViewHistory().filter(item => item.id !== entry.id)));
@@ -406,7 +411,8 @@ function renderViewHistory() {
       writePinnedLaws(nextPinned);
       renderViewHistory();
     });
-    item.append(makeLawLink(entry), makeLawListActions(pin, remove));
+    content.append(makeLawLink(entry), makeLawListActions(pin, remove));
+    item.append(content);
     list.append(item);
   }
   document.querySelector("#view-history").hidden = list.childElementCount === 0 && pinned.length === 0;
