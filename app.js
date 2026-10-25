@@ -358,6 +358,14 @@ function makeDeleteButton(entry, onDelete, label, buttonText = "削除") {
   remove.addEventListener("click", onDelete);
   return remove;
 }
+function makeMoveButton(entry, label, direction, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.setAttribute("aria-label", `${entry.title || entry.id}を固定一覧内で${direction}へ移動`);
+  button.addEventListener("click", onClick);
+  return button;
+}
 
 function makeLawListActions(...buttons) {
   const actions = document.createElement("span");
@@ -374,17 +382,31 @@ function renderViewHistory() {
   const pinned = readPinnedLaws();
   const pinnedIds = new Set(pinned.map(entry => entry.id));
   pinnedList.replaceChildren();
-  for (const entry of pinned) {
+  for (let index = 0; index < pinned.length; index++) {
+    const entry = pinned[index];
     const item = document.createElement("li");
     const content = document.createElement("div");
     content.className = "law-item-content";
+
+    const buttons = [];
+    if (index > 0) {
+      buttons.push(makeMoveButton(entry, "▲", "上", () => {
+        if (index <= 0) return;
+        const nextPinned = [...readPinnedLaws()];
+        [nextPinned[index - 1], nextPinned[index]] = [nextPinned[index], nextPinned[index - 1]];
+        writePinnedLaws(nextPinned);
+        renderViewHistory();
+      }));
+    }
+
+    buttons.push(makeDeleteButton(entry, () => {
+      writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
+      renderViewHistory();
+    }, "固定一覧", "解除"));
     content.append(
       makeLawLink(entry),
-      makeLawListActions(makeDeleteButton(entry, () => {
-        writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
-        renderViewHistory();
-      }, "固定一覧", "解除")),
-    );
+      makeLawListActions(...buttons),
+    )
     item.append(content);
     pinnedList.append(item);
   }
