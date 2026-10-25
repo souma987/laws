@@ -164,24 +164,48 @@
     #content .subitem1 { margin-left: 1.5em; }
     #content .subitem2 { margin-left: 3em; }
     #content .subitem3, #content .subitem4 { margin-left: 4.5em; }
-    footer { margin-top: 3rem; }
+    #mobile-bar { display: none; }footer { margin-top: 3rem; }
     @media (max-width: 115rem) {
       #layout.has-toc:not(.has-metadata) { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); }
       #layout.has-metadata:not(.has-toc) { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
       #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) minmax(0, 14rem); }
     }
-    @media (max-width: 75rem) {
+    @media (48rem < width <= 75rem) {
       #layout.has-toc.has-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 14rem); }
       #layout.has-toc.has-metadata #left-rail { grid-column: 1 / -1; position: static; max-height: none; }
       #layout.has-toc.has-metadata #toc-panel { max-height: 18rem; }
     }
     @media (max-width: 48rem) {
       main { width: calc(100% - 2rem); margin: 0 auto; }
+      body:has(#mobile-bar:not([hidden])) { padding-bottom: var(--mobile-bar-height, 6rem); }
       #layout { display: block; }
-      #left-rail, #right-rail { position: static; height: auto; max-height: none; margin-bottom: 2rem; }
-      #right-scroll { overflow: visible; }
-      #toc-panel { max-height: none; }
+      #left-rail { position: static; max-height: none; }
+
+      /* Bottom bar (buttons are intentionally left unstyled) */
+      #mobile-bar:not([hidden]) { position: fixed; right: 0; bottom: 0; left: 0; z-index: 11; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom)); background: #fff; border-top: 2px solid #aeb7bd; }
+      #mobile-bar #article-jump-panel #home-link { display: none; }
+      #mobile-bar #article-jump-input { font-size: 16px; } /* prevents iOS zoom on focus */
+      #mobile-bar-nav { display: flex; align-items: center; gap: 0.5rem; }
+      #mobile-home-link { margin-right: auto; color: #0047ab; }
+      body:not(:has(#layout.has-toc)) #mobile-bar [data-sheet-target="toc"],
+      body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="metadata"],
+      body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="amendment"] { display: none; }
+
+      /* Bottom sheets */
+      #toc-panel, #right-rail { position: fixed; top: auto; right: 0; bottom: var(--mobile-bar-height, 6rem); left: 0; z-index: 10; display: none; height: auto; max-height: 60vh; max-height: 60dvh; margin: 0; padding: 0; background: #fff; border-top: 2px solid #aeb7bd; box-shadow: 0 -0.25rem 1rem rgb(0 0 0 / 0.15); }
+      #toc-panel { overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
+      body[data-sheet="toc"] #toc-panel { display: block; }
+      body[data-sheet="metadata"] #right-rail:not([hidden]),
+      body[data-sheet="amendment"] #right-rail:not([hidden]) { display: block; }
+      #right-nav { display: none; }
+      #right-scroll { max-height: inherit; overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
       #metadata-panel, #amendment-panel { max-height: none; overflow: visible; }
+      
+      /* One section per sheet */
+      body[data-sheet="metadata"] #amendment-panel,
+      body[data-sheet="amendment"] #metadata-panel { display: none; }
+      #right-rail section + section { margin-top: 0; }
+      #mobile-bar #keyboard-toggle { display: inline-block; }
       #title { font-size: 1.5rem; }
       #content h2 { font-size: 1.2rem; }
       #content h3 { font-size: 1.2rem; }
@@ -206,7 +230,7 @@
           <form id="article-jump">
             <div id="article-jump-controls">
               <button id="previous-marker" type="button" aria-label="直前のURLマーカーへ戻る" disabled>◀</button>
-              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動（スラッシュキーでフォーカス）" placeholder="条文番号へ移動（例：424条の2 / 424-2）" autocomplete="off">
+              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動（スラッシュキーでフォーカス）" placeholder="条文へ移動（例：424-2）" autocomplete="off">
               <button id="next-marker" type="button" aria-label="次のURLマーカーへ進む" disabled>▶</button>
               <button type="submit">移動</button>
             </div>
@@ -273,6 +297,15 @@
       </div>
     </div>
   </main>
+  <div id="mobile-bar" hidden>
+    <!-- On narrow screens app.js moves #article-jump-panel here -->
+    <nav id="mobile-bar-nav" aria-label="パネルを開く">
+      <a id="mobile-home-link" href="/">法令検索</a>
+      <button type="button" data-sheet-target="toc" aria-controls="toc-panel" aria-expanded="false">目次</button>
+      <button type="button" data-sheet-target="metadata" aria-controls="metadata-panel" aria-expanded="false">法令情報</button>
+      <button type="button" data-sheet-target="amendment" aria-controls="amendment-panel" aria-expanded="false">改正一覧</button>
+    </nav>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>

@@ -193,6 +193,79 @@ function moveInMarkerHistory(offset) {
 previousMarkerButton.addEventListener("click", () => moveInMarkerHistory(-1));
 nextMarkerButton.addEventListener("click", () => moveInMarkerHistory(1));
 
+const mobileQuery = window.matchMedia("(max-width: 48rem)");
+const mobileBar = document.querySelector("#mobile-bar");
+const articleJumpPanel = document.querySelector("#article-jump-panel");
+const sheetButtons = [...document.querySelectorAll("#mobile-bar [data-sheet-target]")];
+
+function setSheet(name = "") {
+  if (name) document.body.dataset.sheet = name;
+  else delete document.body.dataset.sheet;
+  sheetButtons.forEach(button => {
+    button.setAttribute("aria-expanded", String(button.dataset.sheetTarget === name));
+  });
+}
+
+function placeArticleJumpPanel() {
+  if (mobileQuery.matches) {
+    mobileBar.prepend(articleJumpPanel);
+  } else {
+    document.querySelector("#left-rail").prepend(articleJumpPanel);
+    setSheet();
+  }
+}
+
+function scrollRightPanelTo(target, behavior = "smooth") {
+  const scrollArea = document.querySelector("#right-scroll");
+  if (!target || !scrollArea) return false;
+  scrollArea.scrollTo({
+    top: scrollArea.scrollTop + target.getBoundingClientRect().top - scrollArea.getBoundingClientRect().top,
+    behavior
+  });
+  return true;
+}
+
+function scrollActiveTocIntoView() {
+  const panel = document.querySelector("#toc-panel");
+  centerInScrollArea(panel, panel.querySelector('.toc-link[aria-current="location"]'));
+}
+
+document.querySelector("#mobile-bar-nav").addEventListener("click", event => {
+  const button = event.target.closest("button[data-sheet-target]");
+  if (!button) return;
+  const name = button.dataset.sheetTarget;
+  if (document.body.dataset.sheet === name) {
+    setSheet();
+    return;
+  }
+  setSheet(name);
+  if (name === "toc") {
+    updateActiveTocItem(); // recompute underline now that the panel is visible
+    scrollActiveTocIntoView();
+  } else {
+    const scrollArea = document.querySelector("#right-scroll");
+    scrollArea.scrollTop = 0;
+    if (name === "amendment") centerInScrollArea(scrollArea, document.querySelector("#amendment-list .current-amendment"));
+  }
+});
+
+document.addEventListener("click", event => {
+  if (!document.body.dataset.sheet) return;
+  if (event.target.closest("#mobile-bar, #toc-panel, #right-rail")) return;
+  setSheet();
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && document.body.dataset.sheet) setSheet();
+});
+
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--mobile-bar-height", `${mobileBar.offsetHeight}px`);
+}).observe(mobileBar);
+
+mobileQuery.addEventListener("change", placeArticleJumpPanel);
+placeArticleJumpPanel();
+
 document.querySelector("#toc").addEventListener("click", event => {
   const link = event.target.closest("a.toc-link");
   if (!link) return;
@@ -200,6 +273,7 @@ document.querySelector("#toc").addEventListener("click", event => {
   if (!target) return;
   event.preventDefault();
   navigateToMarker(link.hash, target);
+  if (mobileQuery.matches) setSheet();
 });
 
 content.addEventListener("click", event => {
@@ -450,7 +524,7 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   const input = document.querySelector("#article-jump-input");
   const value = input.value.trim()
     .replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
-    .replace(/[－ー‐‑‒–—−]/g, "-");
+    .replace(/[－ー‐‑‒–—−.．,，]/g, "-");
   const match = value.match(/^第?\s*(\d+(?:(?:条の|の|-)\s*\d+)*)\s*(?:条.*)?$/);
   const number = match?.[1].replace(/条の|の|-/g, "_").replace(/\s/g, "");
   if (!number || !/^\d+(?:_\d+)*$/.test(number)) return;
@@ -459,6 +533,7 @@ document.querySelector("#article-jump").addEventListener("submit", event => {
   const article = nearestArticle(number, articles);
   if (!article) return;
   navigateToMarker(`#${article.id}`, article);
+  if (mobileQuery.matches) input.blur();
 });
 
 document.addEventListener("keydown", event => {
@@ -823,16 +898,7 @@ function renderMetadata(data) {
 document.querySelector("#right-nav").addEventListener("click", event => {
   const link = event.target.closest("a[href^='#']");
   if (!link) return;
-  const target = document.querySelector(link.getAttribute("href"));
-  const scrollArea = document.querySelector("#right-scroll");
-  if (!target || !scrollArea) return;
-  event.preventDefault();
-  const railTop = scrollArea.getBoundingClientRect().top;
-  const targetTop = target.getBoundingClientRect().top;
-  scrollArea.scrollTo({
-    top: scrollArea.scrollTop + targetTop - railTop,
-    behavior: "smooth"
-  });
+  if (scrollRightPanelTo(document.querySelector(link.getAttribute("href")))) event.preventDefault();
 });
 
 async function loadAmendmentHistory(lawId, currentRevisionId, requestedAsLawId = false) {
@@ -1305,6 +1371,8 @@ async function load() {
   const homeLink = document.querySelector("#home-link");
   homeLink.href = location.pathname;
   homeLink.hidden = false;
+  document.querySelector("#mobile-home-link").href = location.pathname;
+  mobileBar.hidden = false;
   try {
     const data = await fetchLawData(lawId);
     if (data.error || !data.law_full_text) throw new Error(data.error?.message || "法令本文が見つかりませんでした。法令IDや法令番号を確認してください。");
