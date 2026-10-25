@@ -873,7 +873,6 @@ function renderMetadata(data) {
       const link = document.createElement("a");
       link.href = href;
       link.target = "_blank";
-      link.rel = "noopener noreferrer";
       link.setAttribute("aria-label", `${label}をe-Gov法令検索で開く`);
       link.append(document.createTextNode(String(value)));
       const marker = document.createElement("span");
