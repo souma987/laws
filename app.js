@@ -197,7 +197,30 @@ const mobileQuery = window.matchMedia("(max-width: 48rem)");
 const mobileBar = document.querySelector("#mobile-bar");
 const articleJumpPanel = document.querySelector("#article-jump-panel");
 const sheetButtons = [...document.querySelectorAll("#mobile-bar [data-sheet-target]")];
+const articleJumpInput = document.querySelector("#article-jump-input");
+const keyboardToggle = document.querySelector("#keyboard-toggle");
+const searchHitNavs = [...document.querySelectorAll(".search-hit-nav")];
 
+function placeArticleJumpPanel() {
+  if (mobileQuery.matches) {
+    mobileBar.prepend(articleJumpPanel);
+  } else {
+    document.querySelector("#left-rail").prepend(articleJumpPanel);
+    setSheet();
+  }
+}
+
+// Numeric keyboard only when explicitly requested; tapping the input itself gives the text keyboard.
+keyboardToggle.addEventListener("click", () => {
+  articleJumpInput.blur();
+  articleJumpInput.inputMode = "decimal";
+  articleJumpInput.focus();
+  articleJumpInput.select();
+});
+
+articleJumpInput.addEventListener("blur", () => {
+  articleJumpInput.inputMode = "text";
+});
 function setSheet(name = "") {
   if (name) document.body.dataset.sheet = name;
   else delete document.body.dataset.sheet;
@@ -519,34 +542,223 @@ function formatSupplementaryLawNumber(value) {
   );
 }
 
-document.querySelector("#article-jump").addEventListener("submit", event => {
-  event.preventDefault();
-  const input = document.querySelector("#article-jump-input");
-  const value = input.value.trim()
+const SEARCH_HIT_LIMIT = 3000;
+const supportsSearchHighlights = typeof Highlight === "function" && "highlights" in CSS;
+const articleSearch = { query: "", hits: [], index: -1, capped: false };
+let articleSearchSegments = null;
+
+function parseArticleNumber(rawValue) {
+  const value = rawValue
     .replace(/[０-９]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
     .replace(/[－ー‐‑‒–—−.．,，]/g, "-");
   const match = value.match(/^第?\s*(\d+(?:(?:条の|の|-)\s*\d+)*)\s*(?:条.*)?$/);
   const number = match?.[1].replace(/条の|の|-/g, "_").replace(/\s/g, "");
-  if (!number || !/^\d+(?:_\d+)*$/.test(number)) return;
-  const mainArticles = [...content.querySelectorAll(".law-main-provision .law-article")];
-  const articles = mainArticles.length ? mainArticles : [...content.querySelectorAll(".law-article")];
-  const article = nearestArticle(number, articles);
-  if (!article) return;
-  navigateToMarker(`#${article.id}`, article);
-  if (mobileQuery.matches) input.blur();
-});
+  return number && /^\d+(?:_\d+)*$/.test(number) ? number : null;
+}
 
-document.addEventListener("keydown", event => {
-  if (event.altKey || event.ctrlKey || event.metaKey) return;
-  const interactive = event.target.closest("input, textarea, select, button, a, [contenteditable='true']");
-  if (event.key === "/" && !interactive) {
-    event.preventDefault();
-    const input = document.querySelector("#article-jump-input");
-    input.focus();
-    input.select();
+// Length-preserving normalization so offsets map 1:1 back to the DOM text.
+function normalizeSearchText(value) {
+  return value
+    .replace(/[\uFF01-\uFF5E]/g, character => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
+    .replace(/\u3000/g, " ")
+    .replace(/[A-Z]/g, character => character.toLowerCase());
+}
+
+// Text nodes grouped per block, so matches can span inline spans (parentheticals, ruby) but not paragraphs.
+function buildArticleSearchSegments() {
+  const segments = [];
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => node.data && !node.parentElement?.closest("rt")
+      ? NodeFilter.FILTER_ACCEPT
+      : NodeFilter.FILTER_REJECT
+  });
+  let current = null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const block = node.parentElement.closest("p, h2, h3, h4, h5, h6, th, td, div, section");
+    if (!current || current.block !== block) {
+      current = { block, nodes: [], text: "" };
+      segments.push(current);
+    }
+    current.nodes.push({ node, start: current.text.length });
+    current.text += normalizeSearchText(node.data);
+  }
+  return segments;
+}
+
+function locateSearchOffset(segment, offset, isEnd) {
+  for (let index = segment.nodes.length - 1; index >= 0; index -= 1) {
+    const { node, start } = segment.nodes[index];
+    if (isEnd ? start < offset : start <= offset) return { node, offset: offset - start };
+  }
+  return { node: segment.nodes[0].node, offset: 0 };
+}
+
+function findArticleSearchHits(query) {
+  if (!articleSearchSegments?.length) articleSearchSegments = buildArticleSearchSegments();
+  const needle = normalizeSearchText(query);
+  const hits = [];
+  for (const segment of articleSearchSegments) {
+    let from = 0;
+    while (true) {
+      const at = segment.text.indexOf(needle, from);
+      if (at < 0) break;
+      const start = locateSearchOffset(segment, at, false);
+      const end = locateSearchOffset(segment, at + needle.length, true);
+      const range = document.createRange();
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+      hits.push(range);
+      if (hits.length >= SEARCH_HIT_LIMIT) return { hits, capped: true };
+      from = at + needle.length;
+    }
+  }
+  return { hits, capped: false };
+}
+
+function paintCurrentSearchHit() {
+  if (!supportsSearchHighlights) return;
+  const current = articleSearch.hits[articleSearch.index];
+  const highlight = current ? new Highlight(current) : new Highlight();
+  highlight.priority = 1;
+  CSS.highlights.set("article-search-current", highlight);
+}
+
+function updateSearchHitNav() {
+  const total = articleSearch.hits.length;
+  const label = total
+    ? `${articleSearch.index + 1} / ${total}${articleSearch.capped ? "+" : ""}件`
+    : "見つかりません";
+  searchHitNavs.forEach(nav => {
+    nav.hidden = !articleSearch.query;
+    nav.querySelector(".search-hit-count").textContent = label;
+    nav.querySelectorAll("[data-search-step]").forEach(button => {
+      button.disabled = total === 0;
+    });
+  });
+}
+
+function showCurrentSearchHit() {
+  const range = articleSearch.hits[articleSearch.index];
+  if (!range) return;
+  if (mobileQuery.matches) setSheet();
+  updateSearchHitNav(); // first, so the mobile bar has its final height before scrolling
+  paintCurrentSearchHit();
+  revealSearchHit(range);
+}
+
+function revealSearchHit(range) {
+  const element = range.startContainer.parentElement;
+  const scroller = element?.closest(".law-table-scroll, .law-columns-scroll");
+  if (scroller) {
+    const hitRect = range.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
+    if (hitRect.left < scrollerRect.left || hitRect.right > scrollerRect.right) {
+      scroller.scrollLeft += hitRect.left - scrollerRect.left - (scrollerRect.width - hitRect.width) / 2;
+    }
+  }
+  const rect = range.getBoundingClientRect();
+  const bottomInset = mobileQuery.matches && !mobileBar.hidden ? mobileBar.offsetHeight : 0;
+  const visibleHeight = window.innerHeight - bottomInset;
+  window.scrollTo({ top: window.scrollY + rect.top - (visibleHeight - rect.height) / 2 });
+}
+
+function moveSearchHit(offset) {
+  const total = articleSearch.hits.length;
+  if (!total) return;
+  articleSearch.index = (articleSearch.index + offset + total) % total;
+  showCurrentSearchHit();
+}
+
+function clearArticleSearch() {
+  Object.assign(articleSearch, { query: "", hits: [], index: -1, capped: false });
+  if (supportsSearchHighlights) {
+    CSS.highlights.delete("article-search-hit");
+    CSS.highlights.delete("article-search-current");
+  }
+  updateSearchHitNav();
+}
+
+function startArticleSearch(query) {
+  if (query === articleSearch.query && articleSearch.hits.length) {
+    moveSearchHit(1);
     return;
   }
-  if (event.shiftKey || interactive) return;
+  const { hits, capped } = findArticleSearchHits(query);
+  Object.assign(articleSearch, { query, hits, capped, index: -1 });
+  if (supportsSearchHighlights) CSS.highlights.set("article-search-hit", new Highlight(...hits));
+  if (!hits.length) {
+    paintCurrentSearchHit();
+    updateSearchHitNav();
+    return;
+  }
+  // Start from the first hit at or below the current scroll position.
+  const firstVisible = hits.findIndex(range => range.getBoundingClientRect().top >= 0);
+  articleSearch.index = Math.max(0, firstVisible);
+  showCurrentSearchHit();
+}
+
+document.querySelector("#article-jump").addEventListener("submit", event => {
+  event.preventDefault();
+  const rawValue = articleJumpInput.value.trim();
+  if (mobileQuery.matches) articleJumpInput.blur();
+  if (!rawValue) {
+    clearArticleSearch();
+    return;
+  }
+  const number = parseArticleNumber(rawValue);
+  const mainArticles = [...content.querySelectorAll(".law-main-provision .law-article")];
+  const articles = mainArticles.length ? mainArticles : [...content.querySelectorAll(".law-article")];
+  const article = number ? nearestArticle(number, articles) : null;
+  if (article) {
+    clearArticleSearch();
+    navigateToMarker(`#${article.id}`, article);
+  } else {
+    startArticleSearch(rawValue);
+  }
+});
+
+articleJumpInput.addEventListener("input", () => {
+  if (!articleJumpInput.value.trim()) clearArticleSearch();
+});
+
+articleJumpInput.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || !event.shiftKey || event.isComposing) return;
+  if (!articleSearch.query || articleSearch.query !== articleJumpInput.value.trim()) return;
+  event.preventDefault();
+  moveSearchHit(-1);
+});
+
+searchHitNavs.forEach(nav => nav.addEventListener("click", event => {
+  const step = event.target.closest("[data-search-step]");
+  if (step) {
+    moveSearchHit(Number(step.dataset.searchStep));
+    return;
+  }
+  if (event.target.closest("[data-search-close]")) {
+    articleJumpInput.value = "";
+    clearArticleSearch();
+  }
+}));
+
+document.addEventListener("keydown", event => {
+  if (event.altKey) return;
+  const modifier = event.ctrlKey || event.metaKey;
+  const interactive = event.target.closest("input, textarea, select, button, a, [contenteditable='true']");
+  const findKey = lawId && modifier && !event.shiftKey && event.key.toLowerCase() === "f"
+    && document.activeElement !== articleJumpInput;
+  if (findKey || (!modifier && event.key === "/" && !interactive)) {
+    event.preventDefault();
+    articleJumpInput.focus();
+    articleJumpInput.select();
+    return;
+  }
+  if (modifier || event.shiftKey || interactive) return;
+  const searchStep = { j: 1, k: -1 }[event.key];
+  if (searchStep && articleSearch.hits.length) {
+    event.preventDefault();
+    moveSearchHit(searchStep);
+    return;
+  }
   const offset = ["h", "ArrowLeft"].includes(event.key) ? -1
     : ["l", "ArrowRight"].includes(event.key) ? 1
       : 0;

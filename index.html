@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
   <meta name="description" content="日本の法令本文を検索・閲覧できます。法令名や法令番号から探し、条文と改正履歴を確認できます。">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#ffffff">
@@ -29,8 +29,18 @@
     #toc-panel { flex: 1 1 auto; min-height: 0; overflow: auto; padding-inline-end: 4px; scrollbar-gutter: stable; }
     #toc-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; }
     #article-jump { margin: 0; }
-    #article-jump-panel #home-link { display: inline-block; margin-bottom: 1rem; color: #0047ab; }
+    #article-jump-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+    #article-jump-panel #home-link { display: inline-block; color: #0047ab; }
     #article-jump-panel #home-link[hidden] { display: none; }
+    #article-jump-controls > button { flex: 0 0 auto; white-space: nowrap; }
+    .search-hit-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .search-hit-nav[hidden] { display: none; }
+    #article-jump-header .search-hit-nav[hidden] { display: flex; visibility: hidden; }
+    #article-jump-header .search-hit-nav { margin-left: auto; }
+    .search-hit-count { color: #475467; font-size: 0.9em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #keyboard-toggle { display: none; flex: 0 0 auto; white-space: nowrap; }
+    ::highlight(article-search-hit) { background-color: #fff1a8; }
+    ::highlight(article-search-current) { background-color: #ffb340; }
     #article-jump-controls { display: flex; gap: 0.5rem; }
     #article-jump-input { flex: 1 1 auto; min-width: 0; }
     #right-rail { position: sticky; top: 1.5rem; align-self: start; display: flex; flex-direction: column; height: calc(100vh - 3rem); min-height: 0; }
@@ -180,18 +190,16 @@
       body:has(#mobile-bar:not([hidden])) { padding-bottom: var(--mobile-bar-height, 6rem); }
       #layout { display: block; }
       #left-rail { position: static; max-height: none; }
-
-      /* Bottom bar (buttons are intentionally left unstyled) */
+      #mobile-bar > .search-hit-nav { order: -1; }
       #mobile-bar:not([hidden]) { position: fixed; right: 0; bottom: 0; left: 0; z-index: 11; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom)); background: #fff; border-top: 2px solid #aeb7bd; }
-      #mobile-bar #article-jump-panel #home-link { display: none; }
+      #mobile-bar #article-jump-header { display: none; }
+      #mobile-bar > .search-hit-nav .search-hit-count { margin-right: auto; }
       #mobile-bar #article-jump-input { font-size: 16px; } /* prevents iOS zoom on focus */
       #mobile-bar-nav { display: flex; align-items: center; gap: 0.5rem; }
       #mobile-home-link { margin-right: auto; color: #0047ab; }
       body:not(:has(#layout.has-toc)) #mobile-bar [data-sheet-target="toc"],
       body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="metadata"],
       body:has(#right-rail[hidden]) #mobile-bar [data-sheet-target="amendment"] { display: none; }
-
-      /* Bottom sheets */
       #toc-panel, #right-rail { position: fixed; top: auto; right: 0; bottom: var(--mobile-bar-height, 6rem); left: 0; z-index: 10; display: none; height: auto; max-height: 60vh; max-height: 60dvh; margin: 0; padding: 0; background: #fff; border-top: 2px solid #aeb7bd; box-shadow: 0 -0.25rem 1rem rgb(0 0 0 / 0.15); }
       #toc-panel { overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
       body[data-sheet="toc"] #toc-panel { display: block; }
@@ -200,8 +208,6 @@
       #right-nav { display: none; }
       #right-scroll { max-height: inherit; overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
       #metadata-panel, #amendment-panel { max-height: none; overflow: visible; }
-      
-      /* One section per sheet */
       body[data-sheet="metadata"] #amendment-panel,
       body[data-sheet="amendment"] #metadata-panel { display: none; }
       #right-rail section + section { margin-top: 0; }
@@ -225,14 +231,23 @@
   <main>
     <div id="layout">
       <div id="left-rail" hidden>
-        <aside id="article-jump-panel" aria-label="条文へ移動">
+        <aside id="article-jump-panel" aria-label="条文へ移動・語句検索">
+        <div id="article-jump-header">
           <a id="home-link" href="/" hidden>検索ページに戻る</a>
+          <div class="search-hit-nav" role="group" aria-label="検索結果の移動" hidden>
+            <span class="search-hit-count" aria-live="polite"></span>
+            <button type="button" data-search-step="-1" aria-label="前の検索結果へ">前へ</button>
+            <button type="button" data-search-step="1" aria-label="次の検索結果へ">次へ</button>
+            <button type="button" data-search-close aria-label="検索を終了">✕</button>
+          </div>
+        </div>
           <form id="article-jump">
             <div id="article-jump-controls">
               <button id="previous-marker" type="button" aria-label="直前のURLマーカーへ戻る" disabled>◀</button>
-              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動（スラッシュキーでフォーカス）" placeholder="条文へ移動（例：424-2）" autocomplete="off">
+              <input id="article-jump-input" type="search" inputmode="text" aria-label="条文番号へ移動、または語句を検索（スラッシュキーでフォーカス）" placeholder="番号・語句（例：424-2）" autocomplete="off">
+              <button id="keyboard-toggle" type="button" aria-controls="article-jump-input" aria-label="条文番号を入力（数字キーボード）">番号</button>
               <button id="next-marker" type="button" aria-label="次のURLマーカーへ進む" disabled>▶</button>
-              <button type="submit">移動</button>
+              <button type="submit">検索</button>
             </div>
           </form>
         </aside>
@@ -297,15 +312,21 @@
       </div>
     </div>
   </main>
-  <div id="mobile-bar" hidden>
-    <!-- On narrow screens app.js moves #article-jump-panel here -->
-    <nav id="mobile-bar-nav" aria-label="パネルを開く">
-      <a id="mobile-home-link" href="/">法令検索</a>
-      <button type="button" data-sheet-target="toc" aria-controls="toc-panel" aria-expanded="false">目次</button>
-      <button type="button" data-sheet-target="metadata" aria-controls="metadata-panel" aria-expanded="false">法令情報</button>
-      <button type="button" data-sheet-target="amendment" aria-controls="amendment-panel" aria-expanded="false">改正一覧</button>
-    </nav>
-  </div>
+    <div id="mobile-bar" hidden>
+      <!-- On narrow screens app.js moves #article-jump-panel just before #mobile-bar-nav -->
+      <div class="search-hit-nav" role="group" aria-label="検索結果の移動" hidden>
+        <span class="search-hit-count" aria-live="polite"></span>
+        <button type="button" data-search-step="-1" aria-label="前の検索結果へ">前へ</button>
+        <button type="button" data-search-step="1" aria-label="次の検索結果へ">次へ</button>
+        <button type="button" data-search-close aria-label="検索を終了">✕</button>
+      </div>
+      <nav id="mobile-bar-nav" aria-label="パネルを開く">
+        <a id="mobile-home-link" href="/">法令検索</a>
+        <button type="button" data-sheet-target="toc" aria-controls="toc-panel" aria-expanded="false">目次</button>
+        <button type="button" data-sheet-target="metadata" aria-controls="metadata-panel" aria-expanded="false">法令情報</button>
+        <button type="button" data-sheet-target="amendment" aria-controls="amendment-panel" aria-expanded="false">改正一覧</button>
+      </nav>
+    </div>
   <script src="app.js"></script>
 </body>
 </html>
