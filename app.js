@@ -251,6 +251,13 @@ function makeDeleteButton(entry, onDelete, label, buttonText = "削除") {
   return remove;
 }
 
+function makeLawListActions(...buttons) {
+  const actions = document.createElement("span");
+  actions.className = "law-list-actions";
+  actions.append(...buttons);
+  return actions;
+}
+
 function renderViewHistory() {
   const list = document.querySelector("#view-history-list");
   if (!list) return;
@@ -261,18 +268,19 @@ function renderViewHistory() {
   pinnedList.replaceChildren();
   for (const entry of pinned) {
     const item = document.createElement("li");
-    item.append(makeLawLink(entry));
-    item.append(makeDeleteButton(entry, () => {
-      writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
-      renderViewHistory();
-    }, "固定一覧", "解除"));
+    item.append(
+      makeLawLink(entry),
+      makeLawListActions(makeDeleteButton(entry, () => {
+        writePinnedLaws(readPinnedLaws().filter(item => item.id !== entry.id));
+        renderViewHistory();
+      }, "固定一覧", "解除")),
+    );
     pinnedList.append(item);
   }
   pinnedSection.hidden = pinned.length === 0;
   list.replaceChildren();
   for (const entry of readViewHistory().filter(entry => !pinnedIds.has(entry.id)).slice(0, MAX_VIEW_HISTORY)) {
     const item = document.createElement("li");
-    item.append(makeLawLink(entry));
     const remove = makeDeleteButton(entry, () => {
       try {
         localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(readViewHistory().filter(item => item.id !== entry.id)));
@@ -290,7 +298,7 @@ function renderViewHistory() {
       writePinnedLaws(nextPinned);
       renderViewHistory();
     });
-    item.append(remove, pin);
+    item.append(makeLawLink(entry), makeLawListActions(pin, remove));
     list.append(item);
   }
   document.querySelector("#view-history").hidden = list.childElementCount === 0 && pinned.length === 0;

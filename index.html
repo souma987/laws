@@ -88,11 +88,10 @@
     #search-results li { margin: 1rem 0; }
     #view-history { margin-top: 2rem; }
     #view-history h2 { font-size: 1.25rem; }
-    #pinned-laws-list { margin: 0; padding-left: 2rem; }
-    #pinned-laws-list li { margin: 0.75rem 0; }
-    #pinned-laws-list button, #view-history-list button { float: right; margin-left: 0.75rem; }
-    #view-history-list { margin: 0; padding-left: 2rem; }
-    #view-history-list li { margin: 0.75rem 0; }
+    #pinned-laws-list, #view-history-list { margin: 0; padding-left: 2rem; }
+    #pinned-laws-list li, #view-history-list li { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0.75rem 0; }
+    #pinned-laws-list a, #view-history-list a { flex: 1; min-width: 0; }
+    #pinned-laws-list .law-list-actions, #view-history-list .law-list-actions { display: flex; flex-shrink: 0; gap: 0.75rem; }
     #content { margin-top: 2rem; }
     #content .law-structure-part, #content .law-structure-chapter { scroll-margin-top: 0.5rem; }  /* in sync with sticky top */
     #content .law-structure-section, #content .law-structure-subsection, #content .law-structure-division, #content .law-article { scroll-margin-top: var(--scroll-margin-offset, 60px); }  /* see updateActiveTocItem() */
