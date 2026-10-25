@@ -162,6 +162,11 @@ function rememberLaw(id, title) {
   } catch { /* Browsing still works when storage is unavailable. */ }
 }
 
+function formatRevisionTitle(title, revisionInfo = {}) {
+  const date = revisionInfo.amendment_enforcement_date || revisionInfo.amendment_scheduled_enforcement_date;
+  return date ? `${title}（${date} 施行）` : title;
+}
+
 function textOf(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(textOf).join("");
@@ -1126,7 +1131,9 @@ async function load() {
     const title = data.revision_info?.law_title || data.law_full_text?.children?.[0]?.children?.[0] || "法令本文";
     currentLawNumber = data.law_info?.law_num || "";
     const plainTitle = typeof title === "string" ? title : textOf(title);
-    rememberLaw(data.law_info?.law_id || lawId, plainTitle);
+    const revisionId = data.revision_info?.law_revision_id || lawId;
+    const historyTitle = formatRevisionTitle(plainTitle, data.revision_info);
+    rememberLaw(revisionId, historyTitle);
     setPageMetadata(`${plainTitle} | 法令本文`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
