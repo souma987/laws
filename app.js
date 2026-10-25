@@ -799,27 +799,6 @@ function renderMetadata(data) {
     row.append(term, description);
     list.append(row);
   });
-  const fitMetadataRows = () => {
-    list.querySelectorAll(".metadata-row").forEach(row => {
-      const term = row.querySelector("dt");
-      const description = row.querySelector("dd");
-      const available = row.clientWidth;
-      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-      const termWidth = term.getBoundingClientRect().width;
-      const probe = description.cloneNode(true);
-      Object.assign(probe.style, {
-        position: "fixed", left: "-10000px", top: "0", width: "max-content",
-        minWidth: "0", maxWidth: "none", whiteSpace: "nowrap", flex: "none"
-      });
-      document.body.append(probe);
-      const preferredDescriptionWidth = probe.getBoundingClientRect().width;
-      probe.remove();
-      row.classList.toggle("metadata-row-stacked", termWidth + gap + preferredDescriptionWidth > available);
-    });
-  };
-  fitMetadataRows();
-  if ("ResizeObserver" in window) new ResizeObserver(fitMetadataRows).observe(list);
-  window.addEventListener("resize", fitMetadataRows);
   if (list.childElementCount) {
     document.querySelector("#metadata-panel").hidden = false;
     document.querySelector("#right-rail").hidden = false;
