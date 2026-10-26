@@ -56,10 +56,6 @@
     #layout.has-metadata.right-rail-collapsed:not(.has-toc) { grid-template-columns: minmax(0, 62rem) max-content; }
     #layout.has-toc.has-metadata.right-rail-collapsed { grid-template-columns: 25rem minmax(0, 62rem) max-content; }
     #right-rail-toggle { flex: 0 0 auto; align-self: center; margin-left: auto; padding: 0 0.4rem; line-height: 1.4; }
-    @media not all and (max-width: 48rem) {
-      #layout.right-rail-collapsed #right-nav a,
-      #layout.right-rail-collapsed #right-scroll { display: none; }
-    }
     #layout:not(.has-toc) { justify-content: center; }
     #left-rail, #toc-panel, #law-main, #right-rail { min-width: 0; }
     #left-rail[hidden], #right-rail[hidden] { display: none; }
@@ -222,7 +218,11 @@
       #layout.has-toc.has-metadata.right-rail-collapsed { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) max-content; }
       #layout { column-gap: 1.3rem; }
     }
-    @media (max-width: 48rem) {
+    @media not all and (max-width: 54rem) {
+      #layout.right-rail-collapsed #right-nav a,
+      #layout.right-rail-collapsed #right-scroll { display: none; }
+    }
+    @media (max-width: 54rem) {
       main { width: calc(100% - 2rem); margin: 0 auto; }
       body:has(#mobile-bar:not([hidden])) { padding-bottom: var(--mobile-bar-height, 6rem); }
       #layout { display: block; }
