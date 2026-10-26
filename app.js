@@ -220,7 +220,7 @@ function moveInMarkerHistory(offset) {
 previousMarkerButton.addEventListener("click", () => moveInMarkerHistory(-1));
 nextMarkerButton.addEventListener("click", () => moveInMarkerHistory(1));
 
-const mobileQuery = window.matchMedia("(max-width: 48rem)");
+const mobileQuery = window.matchMedia("(max-width: 54rem)");
 const mobileBar = document.querySelector("#mobile-bar");
 const articleJumpPanel = document.querySelector("#article-jump-panel");
 const sheetButtons = [...document.querySelectorAll("#mobile-bar [data-sheet-target]")];
