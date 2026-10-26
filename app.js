@@ -1772,7 +1772,6 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
   await runSearch(query);
 });
 
-const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
 const SEARCH_LIMIT = 100;
 
 async function fetchLaws(field, query) {
