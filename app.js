@@ -1826,10 +1826,18 @@ async function runSearch(query) {
     return;
   }
 
+  // APIが返した総数を合計し、取得済みの結果の中で見つかった重複分を引く
+  const fetchedCount = succeeded.reduce((sum, { laws }) => sum + laws.length, 0);
+  const duplicateCount = fetchedCount - laws.length;
+  const totalSum = succeeded.reduce((sum, { total }) => sum + total, 0);
+  const estimatedTotal = totalSum - duplicateCount;
+
   const truncated = succeeded.some(({ total }) => total > SEARCH_LIMIT);
   const partialFailure = succeeded.length < outcomes.length;
-  let message = `${laws.length}件の法令が見つかりました。`;
-  if (truncated) message += `（一部の検索で${SEARCH_LIMIT}件を超えたため、先頭${SEARCH_LIMIT}件のみ表示しています）`;
+
+  let message = truncated
+    ? `約${estimatedTotal.toLocaleString()}件の法令が見つかりました（${laws.length}件を表示しています）。`
+    : `${laws.length.toLocaleString()}件の法令が見つかりました。`;
   if (partialFailure) message += "（一部の検索に失敗したため、結果が不完全な可能性があります）";
   searchStatus.textContent = message;
 
