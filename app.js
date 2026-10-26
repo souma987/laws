@@ -599,7 +599,7 @@ function formatSupplementaryLawNumber(value) {
   );
 }
 
-const SEARCH_HIT_LIMIT = 3000;
+const SEARCH_HIT_LIMIT = 999;
 const supportsSearchHighlights = typeof Highlight === "function" && "highlights" in CSS;
 const articleSearch = { query: "", hits: [], index: -1, capped: false };
 let articleSearchSegments = null;
@@ -684,7 +684,7 @@ function updateSearchHitNav() {
   const total = articleSearch.hits.length;
   const label = total
     ? `${articleSearch.index + 1} / ${total}${articleSearch.capped ? "+" : ""}件`
-    : "見つかりません";
+    : "結果なし";
   searchHitNavs.forEach(nav => {
     nav.hidden = !articleSearch.query;
     nav.querySelector(".search-hit-count").textContent = label;
