@@ -1794,6 +1794,25 @@ function getLawId(law) {
   return law.law_info?.law_id || law.law_id || law.revision_info?.law_revision_id;
 }
 
+function clearSearch() {
+  document.querySelector("#search-results").replaceChildren();
+  document.querySelector("#search-status").textContent = "";
+  document.querySelector("#view-history").hidden = false;
+}
+
+function showStatus(message) {
+  const searchStatus = document.querySelector("#search-status");
+  searchStatus.textContent = message;
+  const clearLink = document.createElement("a");
+  clearLink.href = "#";
+  clearLink.textContent = "結果をクリア";
+  clearLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    clearSearch();
+  });
+  searchStatus.append(" ", clearLink);
+}
+
 async function runSearch(query) {
   const searchStatus = document.querySelector("#search-status");
   const results = document.querySelector("#search-results");
@@ -1807,7 +1826,7 @@ async function runSearch(query) {
 
   const succeeded = outcomes.filter((o) => o.status === "fulfilled").map((o) => o.value);
   if (!succeeded.length) {
-    searchStatus.textContent = `${outcomes[0].reason?.message ?? "検索に失敗しました。"} 時間をおいて再試行してください。`;
+    showStatus(`${outcomes[0].reason?.message ?? "検索に失敗しました。"} 時間をおいて再試行してください。`);
     return;
   }
 
@@ -1822,7 +1841,7 @@ async function runSearch(query) {
   const laws = [...merged.values()];
 
   if (!laws.length) {
-    searchStatus.textContent = "該当する法令はありません。";
+    showStatus("該当する法令はありません。");
     return;
   }
 
@@ -1839,7 +1858,7 @@ async function runSearch(query) {
     ? `約${estimatedTotal.toLocaleString()}件の法令が見つかりました（${laws.length}件を表示しています）。`
     : `${laws.length.toLocaleString()}件の法令が見つかりました。`;
   if (partialFailure) message += "（一部の検索に失敗したため、結果が不完全な可能性があります）";
-  searchStatus.textContent = message;
+  showStatus(message);
 
   document.querySelector("#view-history").hidden = true;
   for (const law of laws) {
