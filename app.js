@@ -1797,7 +1797,7 @@ function getLawId(law) {
 function resetSearchView() {
   document.querySelector("#search-results").replaceChildren();
   document.querySelector("#search-status").textContent = "";
-  document.querySelector("#view-history").hidden = false;
+  renderViewHistory();
 }
 
 function clearSearch() {
