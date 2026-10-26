@@ -1794,10 +1794,20 @@ function getLawId(law) {
   return law.law_info?.law_id || law.law_id || law.revision_info?.law_revision_id;
 }
 
-function clearSearch() {
+function resetSearchView() {
   document.querySelector("#search-results").replaceChildren();
   document.querySelector("#search-status").textContent = "";
   document.querySelector("#view-history").hidden = false;
+}
+
+function clearSearch() {
+  resetSearchView();
+  document.querySelector("#search-query").value = "";
+  const url = new URL(location.href);
+  if (url.searchParams.has("search")) {
+    url.searchParams.delete("search");
+    history.pushState(null, "", url);
+  }
 }
 
 function showStatus(message) {
@@ -1890,11 +1900,7 @@ window.addEventListener("popstate", () => {
   const query = new URLSearchParams(location.search).get("search") || "";
   document.querySelector("#search-query").value = query;
   if (query) runSearch(query);
-  else {
-    document.querySelector("#search-results").replaceChildren();
-    document.querySelector("#search-status").textContent = "";
-    document.querySelector("#view-history").hidden = false;
-  }
+  else resetSearchView();
 });
 
 load();
