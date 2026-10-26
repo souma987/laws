@@ -4,6 +4,19 @@ const REVISION_API = "https://laws.e-gov.go.jp/api/2/law_revisions/";
 const CACHE_NAME = "law-text-cache-v1";
 const LAW_REVISION_INDEX_KEY = "law-latest-revision-index";
 const MAX_VIEW_HISTORY = 15;
+const RETAINED_LAW_IDS = [
+  "321CONSTITUTION",
+  "129AC0000000089",
+  "132AC0000000048",
+  "417AC0000000086",
+  "408AC0000000109",
+  "140AC0000000045",
+  "323AC0000000131",
+  "322AC0000000125",
+  "405AC0000000088",
+  "426AC0000000068",
+  "337AC0000000139",
+];
 
 function readRevisionIndex() {
   try {
@@ -127,7 +140,13 @@ async function trimUnusedCache() {
   try {
     const pinned = readPinnedLaws();
     const history = readViewHistory();
-    const retainedIds = new Set([...pinned, ...history].map(entry => entry.id).filter(Boolean));
+    const index = readRevisionIndex();
+    const indexedRevisionIds = RETAINED_LAW_IDS.map(id => index[id]);
+    const retainedIds = new Set(
+      [...pinned, ...history].map(entry => entry.id)
+        .concat(indexedRevisionIds)
+        .filter(Boolean)
+    );
     const cache = await caches.open(CACHE_NAME);
     const requests = await cache.keys();
     for (const req of requests) {
@@ -139,6 +158,14 @@ async function trimUnusedCache() {
       }
     }
   } catch { /* Ignore cache trimming errors */ }
+}
+
+async function deleteCachedLawData(revisionId) {
+  if (!("caches" in window) || !revisionId) return;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.delete(lawDataUrl(revisionId));
+  } catch { /* Ignore cache deletion errors */ }
 }
 
 
@@ -1140,7 +1167,7 @@ document.querySelector("#right-nav").addEventListener("click", event => {
   if (scrollRightPanelTo(document.querySelector(link.getAttribute("href")))) event.preventDefault();
 });
 
-async function loadAmendmentHistory(lawId, currentRevisionId, requestedAsLawId = false) {
+async function loadAmendmentHistory(lawId, currentRevisionId, currentRevisionStatus) {
   const panel = document.querySelector("#amendment-panel");
   const list = document.querySelector("#amendment-list");
   document.querySelector("#right-rail").hidden = false;
@@ -1153,16 +1180,19 @@ async function loadAmendmentHistory(lawId, currentRevisionId, requestedAsLawId =
 
     // Find the latest revision in effect by picking the latest enforcement date (excluding future dates)
     const latestInEffect = findLatestRevision(revisions);
-
     if (latestInEffect?.law_revision_id) {
       setIndexedLatestRevision(lawId, latestInEffect.law_revision_id);
-      if (requestedAsLawId && currentRevisionId && latestInEffect.law_revision_id !== currentRevisionId) {
-        setTimeout(() => {
-          if (confirm("施行状況の更新が見つかりました。再読み込みして最新版を表示しますか？")) {
-            location.reload();
-          }
-        }, 100);
-      }
+    }
+
+    // 表示中の revision の施行状況を、revision API の値と比較する
+    const displayedRevision = revisions.find(r => r.law_revision_id === currentRevisionId);
+    const apiStatus = displayedRevision?.current_revision_status;
+    if (currentRevisionId && apiStatus && apiStatus !== currentRevisionStatus) {
+      setTimeout(async () => {
+        if (!confirm("施行状況の更新が見つかりました。再読み込みして最新の情報を表示しますか？")) return;
+        await deleteCachedLawData(currentRevisionId);
+        location.reload();
+      }, 100);
     }
 
     revisions.forEach(revision => {
@@ -1647,8 +1677,13 @@ async function load() {
     setPageMetadata(`${plainTitle} | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
-    const requestedAsLawId = !lawId.includes("_");
-    if (data.law_info?.law_id) loadAmendmentHistory(data.law_info.law_id, data.revision_info?.law_revision_id, requestedAsLawId);
+    if (data.law_info?.law_id) {
+      loadAmendmentHistory(
+        data.law_info.law_id,
+        data.revision_info?.law_revision_id,
+        data.revision_info?.current_revision_status
+      );
+    }
     const mainProvision = findTag(data.law_full_text, "MainProvision");
     const supplementaryProvisions = findTags(data.law_full_text, "SupplProvision");
     if (mainProvision || supplementaryProvisions.length) {
