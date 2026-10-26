@@ -1653,7 +1653,7 @@ async function load() {
     ogUrl.content = currentUrl;
   };
   if (!lawId) {
-    setPageMetadata("法令検索 | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト", "法令名や法令番号から日本の法令を検索し、条文と改正履歴を確認できます。");
+    setPageMetadata("法令検索 | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト", "法令名や法令番号から日本の法令を検索し、条文と改正履歴を確認できます。パソコン、スマホ、アプリに対応しています。");
     document.querySelector("#title").textContent = "法令検索";
     status.hidden = true;
     document.querySelector("#search-page").hidden = false;
@@ -1674,7 +1674,7 @@ async function load() {
     const revisionId = data.revision_info?.law_revision_id || lawId;
     const historyTitle = formatRevisionTitle(plainTitle, data.revision_info);
     rememberLaw(revisionId, historyTitle);
-    setPageMetadata(`${plainTitle} | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。出典：e-Gov法令検索。`);
+    setPageMetadata(`${plainTitle} | いつでも法令閲覧 パソコンとスマホで見やすい法律サイト`, `${plainTitle}の条文、法令情報、改正履歴を掲載しています。パソコン、スマホ、アプリに対応しています。出典：e-Gov法令検索。`);
     document.querySelector("#title").textContent = plainTitle;
     renderMetadata(data);
     if (data.law_info?.law_id) {
