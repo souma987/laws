@@ -1772,40 +1772,84 @@ document.querySelector("#law-search").addEventListener("submit", async event => 
   await runSearch(query);
 });
 
+const SEARCH_API = "https://laws.e-gov.go.jp/api/2/laws";
+const SEARCH_LIMIT = 100;
+
+async function fetchLaws(field, query) {
+  const params = new URLSearchParams({
+    [field]: query,
+    limit: String(SEARCH_LIMIT),
+    offset: "0",
+    response_format: "json",
+  });
+  const response = await fetch(`${SEARCH_API}?${params}`);
+  if (!response.ok) throw new Error(`検索に失敗しました（${response.status}）。`);
+  const data = await response.json();
+  return {
+    laws: data?.laws || [],
+    total: data?.total_count ?? (data?.laws || []).length,
+  };
+}
+
+function getLawId(law) {
+  return law.law_info?.law_id || law.law_id || law.revision_info?.law_revision_id;
+}
+
 async function runSearch(query) {
   const searchStatus = document.querySelector("#search-status");
   const results = document.querySelector("#search-results");
-  const params = new URLSearchParams({ law_title: query, limit: "100", offset: "0", response_format: "json" });
   results.replaceChildren();
   searchStatus.textContent = "検索しています…";
-  try {
-    const response = await fetch(`${SEARCH_API}?${params}`);
-    if (!response.ok) throw new Error(`検索に失敗しました（${response.status}）。`);
-    const data = await response.json();
-    const laws = data?.laws || [];
-    if (!laws.length) {
-      searchStatus.textContent = "該当する法令はありません。";
-      return;
-    }
-    searchStatus.textContent = `${data.total_count ?? laws.length}件の法令が見つかりました。`;
-    document.querySelector("#view-history").hidden = true;
+
+  const outcomes = await Promise.allSettled([
+    fetchLaws("law_title", query),
+    fetchLaws("law_num", query),
+  ]);
+
+  const succeeded = outcomes.filter((o) => o.status === "fulfilled").map((o) => o.value);
+  if (!succeeded.length) {
+    searchStatus.textContent = `${outcomes[0].reason?.message ?? "検索に失敗しました。"} 時間をおいて再試行してください。`;
+    return;
+  }
+
+  // 法令IDで重複を除きながら結合（法令名での検索結果を先に表示）
+  const merged = new Map();
+  for (const { laws } of succeeded) {
     for (const law of laws) {
-      const item = document.createElement("li");
-      const link = document.createElement("a");
-      const id = law.law_id || law.revision_info?.law_revision_id;
-      link.href = `?${new URLSearchParams({ id })}`;
-      link.textContent = law.revision_info?.law_title || law.law_title || law.law_num || id;
-      item.append(link);
-      const number = law.law_num || law.law_info?.law_num;
-      if (number) {
-        const detail = document.createElement("span");
-        detail.textContent = `（${number}）`;
-        item.append(detail);
-      }
-      results.append(item);
+      const id = getLawId(law);
+      if (id && !merged.has(id)) merged.set(id, law);
     }
-  } catch (error) {
-    searchStatus.textContent = `${error.message} 時間をおいて再試行してください。`;
+  }
+  const laws = [...merged.values()];
+
+  if (!laws.length) {
+    searchStatus.textContent = "該当する法令はありません。";
+    return;
+  }
+
+  const truncated = succeeded.some(({ total }) => total > SEARCH_LIMIT);
+  const partialFailure = succeeded.length < outcomes.length;
+  let message = `${laws.length}件の法令が見つかりました。`;
+  if (truncated) message += `（一部の検索で${SEARCH_LIMIT}件を超えたため、先頭${SEARCH_LIMIT}件のみ表示しています）`;
+  if (partialFailure) message += "（一部の検索に失敗したため、結果が不完全な可能性があります）";
+  searchStatus.textContent = message;
+
+  document.querySelector("#view-history").hidden = true;
+  for (const law of laws) {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    const id = getLawId(law);
+    link.href = `?${new URLSearchParams({ id })}`;
+    link.textContent =
+      law.revision_info?.law_title || law.law_title || law.law_info?.law_num || law.law_num || id;
+    item.append(link);
+    const number = law.law_info?.law_num || law.law_num;
+    if (number) {
+      const detail = document.createElement("span");
+      detail.textContent = `（${number}）`;
+      item.append(detail);
+    }
+    results.append(item);
   }
 }
 
