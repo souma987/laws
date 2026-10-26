@@ -1167,6 +1167,37 @@ document.querySelector("#right-nav").addEventListener("click", event => {
   if (scrollRightPanelTo(document.querySelector(link.getAttribute("href")))) event.preventDefault();
 });
 
+const RIGHT_RAIL_COLLAPSED_KEY = "law-right-rail-collapsed";
+const rightRailToggle = document.querySelector("#right-rail-toggle");
+
+function readRightRailCollapsed() {
+  try {
+    return localStorage.getItem(RIGHT_RAIL_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function applyRightRailCollapsed(collapsed) {
+  document.querySelector("#layout").classList.toggle("right-rail-collapsed", collapsed);
+  rightRailToggle.textContent = collapsed ? "◀\uFE0E" : "▶\uFE0E";
+  rightRailToggle.setAttribute("aria-expanded", String(!collapsed));
+  rightRailToggle.setAttribute("aria-label", collapsed ? "法令情報・改正一覧を開く" : "法令情報・改正一覧をたたむ");
+}
+
+rightRailToggle.addEventListener("click", () => {
+  const collapsed = !document.querySelector("#layout").classList.contains("right-rail-collapsed");
+  applyRightRailCollapsed(collapsed);
+  try {
+    localStorage.setItem(RIGHT_RAIL_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch { /* Keep the current page usable when storage is unavailable. */ }
+  // 本文の幅が変わり見出しの高さも変わり得るので、目次の現在位置を再計算する
+  threshold = -1;
+  updateActiveTocItem();
+});
+
+applyRightRailCollapsed(readRightRailCollapsed());
+
 async function loadAmendmentHistory(lawId, currentRevisionId, currentRevisionStatus) {
   const panel = document.querySelector("#amendment-panel");
   const list = document.querySelector("#amendment-list");
